@@ -1,0 +1,9 @@
+/vendor/
+/assets/uploads/
+*.sql
+.DS_Store
+credentials.json
+credentials.json.json
+credentials.json*
+error_log
+logs/
