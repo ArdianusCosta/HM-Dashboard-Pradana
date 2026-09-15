@@ -332,7 +332,7 @@ $chart_series_data = [
                             
                             <span class="timeline-badge" style="background: <?= $color ?>;"></span>
                             <div class="d-flex align-items-center mb-1">
-                                <img src="<?= $avatar ?>" class="avatar" style="width: 30px; height: 30px; border-radius: 50%; margin-right: 8px;">
+                                <img src="<?= $avatar ?>" class="avatar" style="width: 30px; height: 30px; border-radius: 50%; margin-right: 8px;" onerror="this.onerror=null;this.src='assets/uploads/empty-placeholder.png';">
                                 <div>
                                     <strong><?php if (!empty($actor_lastname)): ?><?= htmlspecialchars(ucwords($actor_firstname)) ?> <span class="user-lastname"><?= htmlspecialchars(ucwords($actor_lastname)) ?></span><?php else: ?><?= htmlspecialchars($actor_firstname) ?><?php endif; ?></strong><br>
                                     <small class="text-muted"><?= date('d M, H:i', strtotime($log['created_at'])) ?></small>
@@ -445,7 +445,8 @@ $chart_series_data = [
                                         <img src="<?= $u_kpi['avatar'] ?>" 
                                              alt="<?= htmlspecialchars($u_kpi['name']) ?>" 
                                              class="rounded-circle border border-white shadow-sm user-pin-img"
-                                             style="width: 44px; height: 44px; object-fit: cover; background-color: #fff;">
+                                             style="width: 44px; height: 44px; object-fit: cover; background-color: #fff;"
+                                             onerror="this.onerror=null;this.src='assets/uploads/empty-placeholder.png';">
                                         <span class="badge badge-pill position-absolute" 
                                               style="bottom: -11px; left: 50%; transform: translateX(-50%); font-size: 9px; font-weight: 700; padding: 2px 6px; background: <?= $badge_bg ?>; color: #fff; border: 1.5px solid #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
                                             <?= $u_kpi['kpi'] ?>%
@@ -1123,7 +1124,7 @@ while($proj = $projects->fetch_assoc()){
                             <small class="text-muted d-block">Project Manager</small>
                             <?php if($p['manager']): ?>
                                 <div class="d-flex align-items-center">
-                                    <img src="<?= $p['manager']['avatar'] ?>" class="rounded-circle border mr-2" style="width:35px; height:35px; object-fit:cover;">
+                                     <img src="<?= $p['manager']['avatar'] ?>" class="rounded-circle border mr-2" style="width:35px; height:35px; object-fit:cover;" onerror="this.onerror=null;this.src='assets/uploads/empty-placeholder.png';">
                                     <strong class="text-truncate" title="<?= $p['manager']['name'] ?>"><?= ucwords(explode(' ', $p['manager']['name'])[0]) ?> <span class="user-lastname"><?= ucwords(array_slice(explode(' ', $p['manager']['name']), 1) ? implode(' ', array_slice(explode(' ', $p['manager']['name']), 1)) : '') ?></span></strong>
                                 </div>
                             <?php else: ?>
@@ -1134,7 +1135,7 @@ while($proj = $projects->fetch_assoc()){
                         <div class="d-flex flex-wrap align-items-center mt-1 assignment-list">
                             <?php if(!empty($p['members'])): ?>
                                 <?php foreach($p['members'] as $m): ?>
-                                    <img src="<?= $m['avatar'] ?>" class="rounded-circle border border-white avatar-member" style="width:30px; height:30px; object-fit:cover;" title="<?= $m['name'] ?>">
+                                     <img src="<?= $m['avatar'] ?>" class="rounded-circle border border-white avatar-member" style="width:30px; height:30px; object-fit:cover;" title="<?= $m['name'] ?>" onerror="this.onerror=null;this.src='assets/uploads/empty-placeholder.png';">
                                 <?php endforeach; ?>
                             <?php else: ?>
                                 <span class="text-muted">No Members</span>

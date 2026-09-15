@@ -129,7 +129,8 @@ if ($qry->num_rows > 0) {
         <?php if ($creator): ?>
         <div class="td-av-row">
           <img src="assets/uploads/<?= !empty($creator['avatar']) ? htmlspecialchars($creator['avatar']) : 'empty-placeholder.png' ?>"
-               alt="" class="td-av" style="margin-left:0;">
+               alt="" class="td-av" style="margin-left:0;"
+               onerror="this.onerror=null;this.src='assets/uploads/empty-placeholder.png';">
           <span class="td-av-name"><?= ucwords($creator['firstname']) ?> <span class="user-lastname"><?= ucwords($creator['lastname']) ?></span></span>
         </div>
         <?php else: ?>
@@ -155,7 +156,8 @@ if ($qry->num_rows > 0) {
           <?php foreach ($task_assigned_users as $au): ?>
           <img src="assets/uploads/<?= !empty($au['avatar']) ? htmlspecialchars($au['avatar']) : 'empty-placeholder.png' ?>"
                alt="" class="td-av"
-               title="<?= ucwords($au['firstname'].' '.$au['lastname']) ?>">
+               title="<?= ucwords($au['firstname'].' '.$au['lastname']) ?>"
+               onerror="this.onerror=null;this.src='assets/uploads/empty-placeholder.png';">
           <?php endforeach; ?>
         </div>
         <?php else: ?>
@@ -267,7 +269,8 @@ if ($qry->num_rows > 0) {
           <div class="td-cmt-top">
             <img class="td-cmt-av"
                  src="assets/uploads/<?= !empty($comment['avatar']) ? htmlspecialchars($comment['avatar']) : 'empty-placeholder.png' ?>"
-                 alt="">
+                 alt=""
+                 onerror="this.onerror=null;this.src='assets/uploads/empty-placeholder.png';">
             <div class="td-cmt-meta">
               <span class="td-cmt-name"><?= ucwords(htmlspecialchars($comment['uname'])) ?></span>
               <span class="td-cmt-time"><?= date('M d, Y h:i A', strtotime($comment['date_created'])) ?></span>

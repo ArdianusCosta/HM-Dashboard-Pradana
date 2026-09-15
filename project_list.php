@@ -231,7 +231,8 @@ $qry = $conn->query("SELECT * FROM project_list $where ORDER BY name ASC");
                 ?>
                     <img src="<?= $avatar ?>" class="rounded-circle border border-white shadow-sm" 
                         title="<?= $u['firstname'] ?>" 
-                        style="width:34px; height:34px; object-fit:cover; background-color: #d1d1d1;">
+                        style="width:34px; height:34px; object-fit:cover; background-color: #d1d1d1;"
+                        onerror="this.onerror=null;this.src='assets/uploads/empty-placeholder.png';">
                 <?php endwhile; endif; endif; ?>
 
                 <?php if (count($uids) > 5): ?>
@@ -1376,7 +1377,8 @@ $(document).ready(function(){
                         <img src="${avatar}" 
                              class="rounded-circle border border-secondary mr-3" 
                              style="width:45px; height:45px; object-fit:cover;" 
-                             alt="${user.firstname} ${user.lastname}">
+                             alt="${user.firstname} ${user.lastname}"
+                             onerror="this.onerror=null;this.src='assets/uploads/empty-placeholder.png';">
                         <b>${fullName}</b>
                     </div>
                 `;

@@ -277,7 +277,7 @@ $user_task_filter = " AND (
                                             : 'empty-placeholder.png';
                                 ?>
                                 <div class="avatar-stack-container">
-                                    <img src="assets/uploads/<?php echo $c_img ?>" class="avatar-table rolling-avatar" style="--d: 0;">
+                                    <img src="assets/uploads/<?php echo $c_img ?>" class="avatar-table rolling-avatar" style="--d: 0;" onerror="this.onerror=null;this.src='assets/uploads/empty-placeholder.png';">
                                 </div>
                             </td>
                             <td class="text-center text-center-assigned">
@@ -292,7 +292,8 @@ $user_task_filter = " AND (
                                     ?>
                                         <img src="<?php echo $img_src ?>" 
                                             class="avatar-table rolling-avatar" 
-                                            style="--d: <?php echo $idx ?>;">
+                                            style="--d: <?php echo $idx ?>;"
+                                            onerror="this.onerror=null;this.src='assets/uploads/empty-placeholder.png';">
                                     <?php $idx++; endwhile; endif; ?>
                                 </div>
                             </td>

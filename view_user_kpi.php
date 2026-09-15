@@ -96,7 +96,7 @@ $user_avatar = !empty($user_row['avatar']) && is_file('assets/uploads/'.$user_ro
   <!-- USER HEADER WITH EXPORT EXCEL & EXPORT PDF BUTTONS -->
   <div class="d-flex align-items-center justify-content-between p-3 mb-3 bg-white rounded shadow-sm border flex-wrap" style="gap: 10px;">
     <div class="d-flex align-items-center">
-      <img src="<?= $user_avatar ?>" class="rounded-circle border mr-3" style="width: 55px; height: 55px; object-fit: cover;">
+      <img src="<?= $user_avatar ?>" class="rounded-circle border mr-3" style="width: 55px; height: 55px; object-fit: cover;" onerror="this.onerror=null;this.src='assets/uploads/empty-placeholder.png';">
       <div>
         <h5 class="font-weight-bold mb-1" style="color: #1a1714;"><?= htmlspecialchars(ucwords($user_row['firstname'] . ' ' . $user_row['lastname'])) ?></h5>
         <span class="badge badge-amber text-white px-2 py-1" style="background-color:#B75301; font-size:11px;"><?= $type_arr[$user_row['type']] ?? 'Employee' ?></span>

@@ -58,7 +58,8 @@ if (isset($_GET['id'])) {
         <img class="img-circle elevation-2" 
              src="assets/uploads/<?php echo $avatar ?>" 
              alt="User Avatar" 
-             style="width: 90px; height: 90px; object-fit: cover;">
+             style="width: 90px; height: 90px; object-fit: cover;"
+             onerror="this.onerror=null;this.src='assets/uploads/empty-placeholder.png';">
       <?php endif; ?>
     </div>
 

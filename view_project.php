@@ -220,7 +220,7 @@ $bar_data_done = json_encode($bar_data_done);
                         <div class="vp-label">Project Manager</div>
                         <?php if(isset($manager['id'])) : ?>
                         <div class="vp-manager-row mt-2">
-                            <img class="vp-avatar" src="assets/uploads/<?php echo !empty($manager['avatar']) ? $manager['avatar'] : 'empty-placeholder.png' ?>" alt="Avatar">
+                            <img class="vp-avatar" src="assets/uploads/<?php echo !empty($manager['avatar']) ? $manager['avatar'] : 'empty-placeholder.png' ?>" alt="Avatar" onerror="this.onerror=null;this.src='assets/uploads/empty-placeholder.png';">
                             <div>
                                 <div class="vp-manager-name text-dark font-weight-bold" style="font-size: 14px;">
                                     <?php $manager_name_parts = explode(' ', $manager['name']); ?>
@@ -291,7 +291,8 @@ $bar_data_done = json_encode($bar_data_done);
                     <img src="assets/uploads/<?php echo !empty($row_m['avatar']) ? $row_m['avatar'] : 'empty-placeholder.png' ?>" 
                          alt="<?php echo ucwords($row_m['name']) ?>"
                          class="vp-av-sm"
-                         title="<?php echo ucwords($row_m['name']) ?>">
+                         title="<?php echo ucwords($row_m['name']) ?>"
+                         onerror="this.onerror=null;this.src='assets/uploads/empty-placeholder.png';">
                 <?php 
                     endwhile;
                 else:
@@ -466,7 +467,8 @@ $bar_data_done = json_encode($bar_data_done);
                                     ?>
                                         <img src="assets/uploads/<?php echo !empty($av['avatar']) ? $av['avatar'] : 'empty-placeholder.png' ?>" 
                                             class="rolling-avatar" 
-                                            style="--d: <?php echo $idx ?>; width:30px; height:30px; object-fit:cover; border-radius:50%; border:2px solid #fff; margin-left: <?php echo ($idx > 0 ? '-10px' : '0') ?>; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+                                            style="--d: <?php echo $idx ?>; width:30px; height:30px; object-fit:cover; border-radius:50%; border:2px solid #fff; margin-left: <?php echo ($idx > 0 ? '-10px' : '0') ?>; box-shadow: 0 2px 5px rgba(0,0,0,0.1);"
+                                            onerror="this.onerror=null;this.src='assets/uploads/empty-placeholder.png';">
                                     <?php $idx++; endwhile; endif; ?>
                                 </div>
                             </td>
@@ -1401,6 +1403,7 @@ $bar_data_done = json_encode($bar_data_done);
                 // Creator avatar from data attribute
                 var creatorAvatar = $tr.data('created-by-avatar') || 'empty-placeholder.png';
                 var $creatorImg = $('<img>').attr('src', 'assets/uploads/' + creatorAvatar)
+                    .attr('onerror', "this.onerror=null;this.src='assets/uploads/empty-placeholder.png';")
                     .css({width:'28px', height:'28px', objectFit:'cover', borderRadius:'50%', border:'2px solid #fff'});
 
                 // Assigned avatars from column 5 (if exists)
