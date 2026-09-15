@@ -1,6 +1,7 @@
 /vendor/
 /assets/uploads/*
 !/assets/uploads/empty-placeholder.png
+!/assets/uploads/ava_*
 !/assets/uploads/chat/
 !/assets/uploads/comments/
 *.sql

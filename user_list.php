@@ -116,7 +116,7 @@ const Toast = Swal.mixin({
         <tr data-firstname="<?php echo htmlspecialchars(ucwords($row['firstname'])) ?>" data-lastname="<?php echo htmlspecialchars(ucwords($row['lastname'])) ?>">
           <th class="text-center"><?php echo $i++ ?></th>
           <td class="text-center">
-            <img src="<?php echo $avatar ?>" alt="Avatar" width="40" height="40" class="rounded-circle">
+            <img src="<?php echo $avatar ?>" alt="Avatar" width="40" height="40" class="rounded-circle" onerror="this.onerror=null;this.src='assets/uploads/empty-placeholder.png';">
           </td>
           <td><b><?php echo ucwords($row['firstname']) ?> <span class="user-lastname"><?php echo ucwords($row['lastname']) ?></span></b></td>
           <td class="text-center"><b><?php echo $row['email'] ?></b></td>
