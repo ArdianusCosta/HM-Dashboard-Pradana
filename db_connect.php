@@ -1,8 +1,8 @@
 <?php 
-$host = "localhost"; 
-$username = "haimoti2_dashboard"; 
-$password = "@4=MTnP9V73J%M*L"; 
-$database = "haimoti2_db"; 
+$host = "localhost";
+$username = "sloprada_admin";
+$password = "slopradana21";
+$database = "sloprada__db";
 
 // Matikan exception otomatis mysqli agar error dapat ditangani secara manual
 mysqli_report(MYSQLI_REPORT_OFF);
