@@ -30,7 +30,7 @@ const Toast = Swal.mixin({
         <h4 class="fw-bold um-title">User Management</h4>
         <p class="um-subtitle">Manage and monitor all system users</p>
       </div>
-    </div>x 
+    </div>
     <div class="col-md-6">
       <div class="d-flex justify-content-end">
         <?php if(isset($_SESSION['login_type']) && $_SESSION['login_type'] < 3): ?>
