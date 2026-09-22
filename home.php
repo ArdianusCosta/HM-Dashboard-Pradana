@@ -427,7 +427,7 @@ $chart_series_data = [
 
 <!-- TEAM KPI (ALL PROJECTS) SECTION -->
 <div class="row mt-3 mb-4 scroll-motion">
-    <div class="col-12 col-lg-6 mb-3">
+    <div class="col-12 mb-3">
         <div class="card shadow-sm border-0 h-100" style="border-radius: 20px; border: none !important;">
             <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center pt-4 px-4 pb-2">
                 <div class="font-weight-bold" style="font-size: 1.1rem; color: #333; letter-spacing: 0.5px;">
@@ -443,7 +443,8 @@ $chart_series_data = [
                 </div>
             </div>
             <div class="card-body px-4 py-2">
-                <div style="position: relative; height: 260px; width: 100%;">
+                <div style="position: relative; height: 380px; width: 100%;">
+
                     <canvas id="overviewBarChart"></canvas>
                 </div>
             </div>
@@ -1573,6 +1574,10 @@ function renderOverviewBarChart(labels, assignedData, doneData) {
     if (ovBarChart) {
         ovBarChart.destroy();
     }
+
+    // Determine max value for dynamic stepSize
+    var maxVal = Math.max.apply(null, assignedData.concat(doneData).concat([0]));
+    var stepSize = maxVal <= 10 ? 1 : (maxVal <= 50 ? 10 : (maxVal <= 200 ? 50 : 100));
     
     ovBarChart = new Chart(ctx, {
         type: 'bar',
@@ -1582,26 +1587,75 @@ function renderOverviewBarChart(labels, assignedData, doneData) {
                 {
                     label: 'Tasks Assigned',
                     data: assignedData,
-                    backgroundColor: '#007bff',
+                    backgroundColor: 'rgba(0, 123, 255, 0.85)',
                     borderColor: '#007bff',
-                    borderWidth: 1
+                    borderWidth: 0,
+                    borderRadius: 4,
+                    borderSkipped: false
                 },
                 {
                     label: 'Tasks Done',
                     data: doneData,
-                    backgroundColor: '#28a745',
+                    backgroundColor: 'rgba(40, 167, 69, 0.85)',
                     borderColor: '#28a745',
-                    borderWidth: 1
+                    borderWidth: 0,
+                    borderRadius: 4,
+                    borderSkipped: false
                 }
             ]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle' } },
+            legend: {
+                position: 'top',
+                align: 'center',
+                labels: {
+                    usePointStyle: false,
+                    boxWidth: 32,
+                    boxHeight: 14,
+                    padding: 16,
+                    fontColor: '#333',
+                    fontSize: 12,
+                    fontStyle: 'normal'
+                }
+            },
             scales: {
-                yAxes: [{ ticks: { beginAtZero: true, stepSize: 1 } }],
-                xAxes: [{ ticks: { display: true }, gridLines: { display: false }, barPercentage: 0.8, categoryPercentage: 0.6 }]
+                yAxes: [{
+                    ticks: {
+                        beginAtZero: true,
+                        stepSize: stepSize,
+                        fontColor: '#666',
+                        fontSize: 11,
+                        padding: 4
+                    },
+                    gridLines: {
+                        color: 'rgba(0,0,0,0.07)',
+                        drawBorder: false
+                    }
+                }],
+                xAxes: [{
+                    ticks: {
+                        display: true,
+                        fontColor: '#444',
+                        fontSize: 11,
+                        maxRotation: 30,
+                        minRotation: 0,
+                        padding: 4
+                    },
+                    gridLines: { display: false },
+                    barPercentage: 0.7,
+                    categoryPercentage: 0.75
+                }]
+            },
+            tooltips: {
+                mode: 'index',
+                intersect: false,
+                backgroundColor: 'rgba(30,30,40,0.92)',
+                titleFontSize: 13,
+                bodyFontSize: 12,
+                cornerRadius: 8,
+                padding: 10
             }
         }
     });
