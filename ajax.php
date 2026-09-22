@@ -20,7 +20,7 @@ if ($action == 'logout') { echo $crud->logout(); exit; }
 
 /* ========== USER MANAGEMENT / CHAT ========== */
 if ($action == 'save_user') { echo $crud->save_user(); exit; }
-
+if ($action == 'toggle_user_status') { echo $crud->toggle_user_status(); exit; }
 if ($action == 'delete_user') { echo $crud->delete_user(); exit; }
 if ($action == 'create_new_group') { echo $crud->create_new_group(); exit; }
 if ($action == 'get_all_chat_sidebar_data') { echo $crud->get_all_chat_sidebar_data(); exit; }
@@ -37,6 +37,7 @@ if ($action == 'get_or_create_thread_id') { echo $crud->get_or_create_thread_id(
 if ($action == 'save_personal_chat_message') { echo $crud->save_personal_chat_message(); exit; }
 if ($action == 'get_personal_chat_messages') { echo $crud->get_personal_chat_messages(); exit; }
 if ($action == 'get_total_unread_chat_count') { echo $crud->get_total_unread_chat_count(); exit; }
+if ($action == 'get_overview_kpi') { echo $crud->get_overview_kpi(); exit; }
 
 /* ========== PROJECT MANAGEMENT ========== */
 if ($action == 'save_project') {

@@ -1,3 +1,6 @@
+<?php
+session_start();
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -81,6 +84,7 @@
 <script>
 /* ================= GOOGLE CALENDAR CONFIG ================= */
 
+const CURRENT_LOGIN_TYPE = <?php echo json_encode((int)($_SESSION['login_type'] ?? 0)); ?>;
 const GOOGLE_API_KEY = 'AIzaSyC8wEmVkA72xJgHZ-MZiZNKnHyVJSwiqFQ';
 const INDONESIA_HOLIDAY_CALENDAR =
   'id.indonesian#holiday@group.v.calendar.google.com';
@@ -143,6 +147,11 @@ $(document).ready(function () {
         start: start.format(),
         end: end.format()
       }).done(function (dbEvents) {
+
+        if (CURRENT_LOGIN_TYPE === 4) {
+          callback(dbEvents || []);
+          return;
+        }
 
         initGoogleApi(() => {
           fetchIndonesiaHolidays(start.toDate(), end.toDate(), function (holidayEvents) {

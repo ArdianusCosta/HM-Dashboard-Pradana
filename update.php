@@ -62,6 +62,15 @@ if (isset($_POST['id'])) {
     $stmt->bind_param("sssssii", $title, $start, $end, $color, $description, $project_id, $id);
 
     if ($stmt->execute()) {
+        $user_id = $_SESSION['login_id'];
+        $activity_type = 'event_update';
+        $log_desc = 'Mengupdate event: ' . $title;
+        
+        $log_stmt = $conn->prepare("INSERT INTO activity_log (user_id, project_id, task_id, activity_type, description, created_at) VALUES (?, ?, NULL, ?, ?, NOW())");
+        $log_stmt->bind_param("iiss", $user_id, $project_id, $activity_type, $log_desc);
+        $log_stmt->execute();
+        $log_stmt->close();
+
         echo json_encode(['status' => 'success']);
     } else {
         echo json_encode(['status' => 'error', 'message' => $stmt->error]);

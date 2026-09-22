@@ -1,13 +1,8 @@
 /vendor/
-/assets/uploads/*
-!/assets/uploads/empty-placeholder.png
-!/assets/uploads/ava_*
-!/assets/uploads/chat/
-!/assets/uploads/comments/
+/assets/uploads/
 *.sql
 .DS_Store
 credentials.json
 credentials.json.json
-credentials.json*
 error_log
-logs/
+/logs/

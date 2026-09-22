@@ -293,7 +293,7 @@ html, body {
             </div>
             <div class="form-content text-center mb-4">
               <h4 class="font-weight-bold" style="color: #B75301;">Login to account</h4>
-              <p class="small text-muted">Enter the official Slo-Pradana workstation. Secure access for authorized personnel only.</p>
+              <p class="small text-muted">Enter the official HaiMotion workstation. Secure access for authorized personnel only.</p>
             </div>
           </div>
 
@@ -358,6 +358,9 @@ html, body {
       success:function(resp){
         if(resp == 1){
           location.href ='index.php?page=home';
+        }else if(resp == 3){
+          $('#login-form').prepend('<div class="alert alert-danger">Akun Anda telah di-nonaktifkan atau berstatus Resign. Silakan hubungi Administrator.</div>')
+          end_load();
         }else{
           $('#login-form').prepend('<div class="alert alert-danger">Username or password is incorrect.</div>')
           end_load();

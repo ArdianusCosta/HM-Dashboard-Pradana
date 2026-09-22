@@ -498,7 +498,7 @@ body {
                                     $shown = 0;
                                     foreach ($avatars as $av) {
                                         if ($av && file_exists("assets/uploads/$av")) {
-                                             echo "<img src='assets/uploads/$av' alt='user' title='{$task['assigned_names']}' onerror=\"this.onerror=null;this.src='assets/uploads/empty-placeholder.png';\">";
+                                            echo "<img src='assets/uploads/$av' alt='user' title='{$task['assigned_names']}'>";
                                             $shown++;
                                             if ($shown >= 3) break;
                                         }

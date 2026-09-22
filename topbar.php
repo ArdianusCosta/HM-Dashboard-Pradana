@@ -11,7 +11,7 @@ $login_firstname = isset($_SESSION['login_firstname']) ? $_SESSION['login_firstn
 
 $type_arr = array('', "Admin", "Project Manager", "Employee"); 
 
-// 💡 KRITIS: ENKRIPSI ID LOGIN DI SINI
+// ðŸ’¡ KRITIS: ENKRIPSI ID LOGIN DI SINI
 $encoded_login_id = $login_id ? encode_id($login_id) : '';
 ?>
 

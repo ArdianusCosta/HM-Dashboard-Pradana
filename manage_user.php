@@ -67,6 +67,14 @@ if(isset($_GET['id'])){
                                 <option value="1" <?= isset($type) && $type == 1 ? 'selected' : '' ?>>Admin</option>
                             </select>
                         </div>
+                        <div class="form-group">
+                            <label>Staff Status</label>
+                            <select name="status" class="custom-select custom-select-sm">
+                                <option value="1" <?= !isset($status) || $status == 1 ? 'selected' : '' ?>>Aktif</option>
+                                <option value="0" <?= isset($status) && $status == 0 ? 'selected' : '' ?>>Non-Aktif / Resign</option>
+                            </select>
+                            <small class="text-muted">Status Resign otomatis mengeluarkan staff dari seluruh project & group chat (task tidak dihapus).</small>
+                        </div>
                         <?php else: ?>
                             <input type="hidden" name="type" value="3">
                         <?php endif; ?>

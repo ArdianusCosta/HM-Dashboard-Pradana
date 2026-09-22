@@ -10,7 +10,7 @@
           <img src="assets/Logo1.png" id="logoMini" class="img-fluid d-none" style="width: 40px;" alt="Mini Logo">
         </h3>
     </a>
-    <small ><p class="text-dark text-center pr-3" style="text-decoration: none">PT Pradana Nusa Energi</p> </small>
+    <small ><p class="text-dark text-center pr-3" style="text-decoration: none">PT Hai Motion Kreatif</p> </small>
     </div>
 
     <div class="sidebar pb-2 mb-4">
@@ -91,6 +91,17 @@
               <i class="nav-icon fas fa-calendar-check"></i>
               <p>
                 Calendar
+              </p>
+            </a>
+          </li>
+          <?php endif; ?>
+
+          <?php if(isset($_SESSION['login_type']) && $_SESSION['login_type'] <= 2): ?>
+          <li class="nav-item mb-2">
+            <a href="./sso_cms.php" target="_blank" class="nav-link">
+              <i class="nav-icon fas fa-globe"></i>
+              <p>
+                Website CMS
               </p>
             </a>
           </li>

@@ -13,13 +13,15 @@ $login_type = $_SESSION['login_type'];
 if (isset($_POST['id'])) {
     $id = intval($_POST['id']);
 
-    // Get event's project
-    $res = $conn->query("SELECT project_id FROM events WHERE id = $id");
-    if ($res->num_rows == 0) {
+    // Get event's details
+    $res = $conn->query("SELECT title, project_id FROM events WHERE id = $id");
+    if (!$res || $res->num_rows == 0) {
         echo "error";
         exit;
     }
-    $project_id = $res->fetch_assoc()['project_id'];
+    $event_data = $res->fetch_assoc();
+    $project_id = $event_data['project_id'];
+    $event_title = $event_data['title'];
 
     // If not admin, check permissions
     if ($login_type != 1) {
@@ -46,6 +48,14 @@ if (isset($_POST['id'])) {
     // Proceed with deletion
     $conn->query("DELETE FROM events WHERE id = $id");
     if ($conn->affected_rows > 0) {
+        $activity_type = 'event_delete';
+        $log_desc = 'Menghapus event: ' . $event_title;
+        
+        $log_stmt = $conn->prepare("INSERT INTO activity_log (user_id, project_id, task_id, activity_type, description, created_at) VALUES (?, ?, NULL, ?, ?, NOW())");
+        $log_stmt->bind_param("iiss", $user_id, $project_id, $activity_type, $log_desc);
+        $log_stmt->execute();
+        $log_stmt->close();
+
         echo "success";
     } else {
         echo "error";

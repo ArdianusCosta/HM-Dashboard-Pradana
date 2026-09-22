@@ -1,4 +1,4 @@
-<?php include('db_connect.php') ?>
+﻿<?php include('db_connect.php') ?>
 <?php
 // Pastikan sesi dimulai dan login_type serta login_id tersedia
 if (!isset($_SESSION['login_type'])) {
@@ -435,31 +435,86 @@ $chart_series_data = [
     $ov_bar_done_json = json_encode($ov_bar_done);
 ?>
 
-<!-- TEAM KPI (ALL PROJECTS) SECTION -->
+<!-- TEAM KPI PROGRESS TRACK SECTION -->
 <div class="row mt-3 mb-4 scroll-motion">
     <div class="col-12 mb-3">
-        <div class="card shadow-sm border-0 h-100" style="border-radius: 20px; border: none !important;">
+        <div class="card shadow-sm border-0" style="border-radius: 20px; border: none !important; overflow: visible;">
             <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center pt-4 px-4 pb-2">
-                <div class="font-weight-bold" style="font-size: 1.1rem; color: #333; letter-spacing: 0.5px;">
-                    <i class="fa fa-chart-bar text-primary mr-2"></i>TEAM KPI (OVERVIEW KARYAWAN)
-                </div>
-                <div style="display:flex;gap:12px;align-items:center">
-                    <span style="display:flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:#64748b">
-                        <span style="width:10px;height:10px;border-radius:3px;background:#007bff;display:inline-block"></span>Assigned
-                    </span>
-                    <span style="display:flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:#64748b">
-                        <span style="width:10px;height:10px;border-radius:3px;background:#28a745;display:inline-block"></span>Done
-                    </span>
+                <div>
+                    <div class="font-weight-bold" style="font-size: 1.1rem; color: #333; letter-spacing: 0.5px;">
+                        <i class="fa fa-chart-line" style="color:#B75301;margin-right:8px;"></i>KPI Progress Track
+                    </div>
+                    <div style="font-size:12px;color:#94a3b8;margin-top:3px;">Pantau posisi pencapaian KPI setiap anggota tim secara real-time. Klik foto profil untuk melihat rincian KPI proyek &amp; tugas.</div>
                 </div>
             </div>
-            <div class="card-body px-4 py-2">
-                <div style="position: relative; height: 340px; width: 100%;">
-                    <canvas id="overviewBarChart"></canvas>
-                </div>
+            <div class="card-body px-4 pb-4 pt-2">
+                <!-- KPI Track Container -->
+                <div id="kpiProgressTrack" style="position:relative; width:100%; padding: 70px 20px 55px 20px; overflow-x:auto; min-height: 160px;">
+
+                    <!-- Track Bar -->
+                    <div style="position:relative; width:100%; height:14px; border-radius:99px; background: linear-gradient(90deg, #dc3545 0%, #dc3545 30%, #ffc107 30%, #ffc107 70%, #28a745 70%, #28a745 100%); box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
+
+                        <!-- Milestone: 0% -->
+                        <div style="position:absolute;left:0%;top:50%;transform:translate(-50%,-50%);">
+                            <div style="width:20px;height:20px;border-radius:50%;background:#fff;border:3px solid #dc3545;box-shadow:0 2px 6px rgba(0,0,0,0.2);"></div>
+                            <div style="position:absolute;top:24px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:10px;font-weight:700;color:#dc3545;">0%</div>
+                        </div>
+
+                        <!-- Milestone: 30% -->
+                        <div style="position:absolute;left:30%;top:50%;transform:translate(-50%,-50%);">
+                            <div style="width:20px;height:20px;border-radius:50%;background:#fff;border:3px solid #ffc107;box-shadow:0 2px 6px rgba(0,0,0,0.2);"></div>
+                            <div style="position:absolute;top:24px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:10px;font-weight:700;color:#856404;">30%</div>
+                        </div>
+
+                        <!-- Milestone: 70% -->
+                        <div style="position:absolute;left:70%;top:50%;transform:translate(-50%,-50%);">
+                            <div style="width:20px;height:20px;border-radius:50%;background:#fff;border:3px solid #28a745;box-shadow:0 2px 6px rgba(0,0,0,0.2);"></div>
+                            <div style="position:absolute;top:24px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:10px;font-weight:700;color:#155724;">70%</div>
+                        </div>
+
+                        <!-- Milestone: 100% -->
+                        <div style="position:absolute;left:100%;top:50%;transform:translate(-50%,-50%);">
+                            <div style="width:20px;height:20px;border-radius:50%;background:#fff;border:3px solid #28a745;box-shadow:0 2px 6px rgba(0,0,0,0.2); display:flex;align-items:center;justify-content:center;">
+                                <i class="fa fa-flag" style="font-size:8px;color:#28a745;"></i>
+                            </div>
+                            <div style="position:absolute;top:24px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:10px;font-weight:700;color:#155724;">100%</div>
+                        </div>
+
+                        <!-- User Avatars (rendered by PHP) -->
+                        <?php
+                        // Group users by rounded KPI bucket to handle overlap
+                        $kpi_buckets = [];
+                        foreach ($ov_user_metrics as $item) {
+                            $bucket = round($item['kpi_pct']);
+                            $kpi_buckets[$bucket][] = $item;
+                        }
+                        ksort($kpi_buckets);
+
+                        foreach ($kpi_buckets as $bucket_pct => $bucket_users) {
+                            $count = count($bucket_users);
+                            foreach ($bucket_users as $idx => $item) {
+                                $pct = $item['kpi_pct'];
+                                $border_color = $pct >= 70 ? '#28a745' : ($pct >= 30 ? '#d39e00' : '#dc3545');
+                                // Stagger avatars vertically if multiple users in same bucket
+                                $top_offset = $count > 1 ? (-68 - ($idx * 42)) : -68;
+                                $name_parts = explode(' ', $item['name']);
+                                $short = $name_parts[0] . (isset($name_parts[1]) ? ' '.mb_substr($name_parts[1],0,1).'.' : '');
+                        ?>
+                        <div class="kpi-track-avatar" data-id="<?= $item['encoded_id'] ?>" data-name="<?= htmlspecialchars($item['name']) ?>" data-pct="<?= $pct ?>" title="<?= htmlspecialchars($item['name']) ?> â€” <?= $pct ?>%"
+                             style="position:absolute; left:<?= $pct ?>%; top:50%; transform:translate(-50%,-50%); margin-top:<?= $top_offset ?>px; cursor:pointer; z-index:<?= 10 + $idx ?>; text-align:center; transition: transform 0.2s;">
+                            <img src="<?= $item['avatar'] ?>" alt="<?= htmlspecialchars($item['name']) ?>"
+                                 onerror="this.src='assets/uploads/empty-placeholder.png'"
+                                 style="width:38px;height:38px;border-radius:50%;border:3px solid <?= $border_color ?>;box-shadow:0 2px 8px rgba(0,0,0,0.25);object-fit:cover;background:#fff;display:block;">
+                            <div style="margin-top:4px;font-size:9px;font-weight:700;color:#374151;white-space:nowrap;line-height:1.2;"><?= $pct ?>%</div>
+                        </div>
+                        <?php } } ?>
+
+                    </div><!-- end track bar -->
+                </div><!-- end kpiProgressTrack -->
             </div>
             <div class="card-footer bg-transparent border-0 text-center py-3" style="border-top: 1px dashed #e2e8f0 !important; cursor: pointer;" id="overviewTeamKpiBtn" role="button" tabindex="0">
                 <span style="color: #B75301; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">
-                    <i class="fa fa-eye mr-1"></i> VIEW FULL LIST & RANKING BEST EMPLOYEE
+                    <i class="fa fa-eye mr-1"></i> VIEW FULL LIST &amp; RANKING BEST EMPLOYEE
                 </span>
             </div>
         </div>
@@ -1453,56 +1508,18 @@ $(document).ready(function(){
 
 
 
-// === OVERVIEW TEAM KPI BAR CHART & MODAL JS ===
-var ovBarChart = null;
-
-function renderOverviewBarChart(labels, assignedData, doneData) {
-    var canvas = document.getElementById('overviewBarChart');
-    if (!canvas) return;
-    var ctx = canvas.getContext('2d');
-    
-    if (ovBarChart) {
-        ovBarChart.destroy();
-    }
-    
-    ovBarChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [
-                {
-                    label: 'Tasks Assigned',
-                    data: assignedData,
-                    backgroundColor: '#007bff',
-                    borderColor: '#007bff',
-                    borderWidth: 1
-                },
-                {
-                    label: 'Tasks Done',
-                    data: doneData,
-                    backgroundColor: '#28a745',
-                    borderColor: '#28a745',
-                    borderWidth: 1
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle' } },
-            scales: {
-                yAxes: [{ ticks: { beginAtZero: true, stepSize: 1 } }],
-                xAxes: [{ ticks: { display: true }, gridLines: { display: false }, barPercentage: 0.8, categoryPercentage: 0.6 }]
-            }
-        }
-    });
-}
-
-<?php if (isset($ov_bar_labels_json)): ?>
-$(document).ready(function(){
-    renderOverviewBarChart(<?= $ov_bar_labels_json ?>, <?= $ov_bar_assigned_json ?>, <?= $ov_bar_done_json ?>);
+// === KPI PROGRESS TRACK HOVER & CLICK ===
+$(document).on('mouseenter', '.kpi-track-avatar', function() {
+    $(this).css('transform', 'translate(-50%, -50%) scale(1.2)');
+    $(this).css('z-index', '999');
+}).on('mouseleave', '.kpi-track-avatar', function() {
+    $(this).css('transform', 'translate(-50%, -50%) scale(1)');
+    $(this).css('z-index', '10');
+}).on('click', '.kpi-track-avatar', function() {
+    var id = $(this).data('id');
+    var name = $(this).data('name');
+    uni_modal("<i class='fa fa-chart-line mr-2'></i> Team KPI Breakdown &mdash; " + name, "view_user_kpi.php?id=" + id, "large");
 });
-<?php endif; ?>
 
 $('#overviewTeamKpiBtn').on('click', function(){
     $('#kpiOverviewModal').modal('show');

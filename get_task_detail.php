@@ -88,8 +88,8 @@ if ($qry->num_rows > 0) {
             </button>
         </div>
         <div class="drawer-body">
-            <?php $raw = trim(strip_tags(html_entity_decode($row['description']))); ?>
-            <?= !empty($raw) ? html_entity_decode($row['description']) : '<span class="text-muted">No description.</span>' ?>
+            <?php $cleaned_desc = clean_html_entities($row['description']); $raw = trim(strip_tags($cleaned_desc)); ?>
+            <?= !empty($raw) ? $cleaned_desc : '<span class="text-muted">No description.</span>' ?>
         </div>
     </div>
 
@@ -129,8 +129,7 @@ if ($qry->num_rows > 0) {
         <?php if ($creator): ?>
         <div class="td-av-row">
           <img src="assets/uploads/<?= !empty($creator['avatar']) ? htmlspecialchars($creator['avatar']) : 'empty-placeholder.png' ?>"
-               alt="" class="td-av" style="margin-left:0;"
-               onerror="this.onerror=null;this.src='assets/uploads/empty-placeholder.png';">
+               alt="" class="td-av" style="margin-left:0;">
           <span class="td-av-name"><?= ucwords($creator['firstname']) ?> <span class="user-lastname"><?= ucwords($creator['lastname']) ?></span></span>
         </div>
         <?php else: ?>
@@ -156,8 +155,7 @@ if ($qry->num_rows > 0) {
           <?php foreach ($task_assigned_users as $au): ?>
           <img src="assets/uploads/<?= !empty($au['avatar']) ? htmlspecialchars($au['avatar']) : 'empty-placeholder.png' ?>"
                alt="" class="td-av"
-               title="<?= ucwords($au['firstname'].' '.$au['lastname']) ?>"
-               onerror="this.onerror=null;this.src='assets/uploads/empty-placeholder.png';">
+               title="<?= ucwords($au['firstname'].' '.$au['lastname']) ?>">
           <?php endforeach; ?>
         </div>
         <?php else: ?>
@@ -188,11 +186,11 @@ if ($qry->num_rows > 0) {
 
     <div class="mb-3">
       <p class="td-lbl">Description</p>
-      <?php $raw = trim(strip_tags(html_entity_decode($row['description']))); ?>
+      <?php $cleaned_desc = clean_html_entities($row['description']); $raw = trim(strip_tags($cleaned_desc)); ?>
       
       <?php if (!empty($raw)): ?>
         <div style="font-size: 0.85rem; color: #1c1917; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">
-          <?= html_entity_decode($row['description']) ?>
+          <?= $cleaned_desc ?>
         </div>
 
         <div style="margin-top: 8px; text-align: right;">
@@ -269,8 +267,7 @@ if ($qry->num_rows > 0) {
           <div class="td-cmt-top">
             <img class="td-cmt-av"
                  src="assets/uploads/<?= !empty($comment['avatar']) ? htmlspecialchars($comment['avatar']) : 'empty-placeholder.png' ?>"
-                 alt=""
-                 onerror="this.onerror=null;this.src='assets/uploads/empty-placeholder.png';">
+                 alt="">
             <div class="td-cmt-meta">
               <span class="td-cmt-name"><?= ucwords(htmlspecialchars($comment['uname'])) ?></span>
               <span class="td-cmt-time"><?= date('M d, Y h:i A', strtotime($comment['date_created'])) ?></span>
@@ -298,7 +295,7 @@ if ($qry->num_rows > 0) {
           <?php if(!empty($comment['subject'])): ?>
           <div class="td-cmt-subj"><?= htmlspecialchars($comment['subject']) ?></div>
           <?php endif; ?>
-          <div class="td-cmt-body"><?= html_entity_decode($comment['comment']) ?></div>
+          <div class="td-cmt-body"><?= clean_html_entities($comment['comment']) ?></div>
         </div>
         <?php endwhile; ?>
       <?php else: ?>

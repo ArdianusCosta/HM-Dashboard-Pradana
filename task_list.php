@@ -321,8 +321,7 @@ if($projects->num_rows > 0):
                             <div class="avatar-stack-container d-flex justify-content-center">
                                 <img src="assets/uploads/<?php echo $c_img ?>" 
                                     class="avatar-table rolling-avatar" 
-                                    style="--d: 0; width:32px; height:32px; object-fit:cover; border-radius:50%; border:2px solid #fff;"
-                                    onerror="this.onerror=null;this.src='assets/uploads/empty-placeholder.png';">
+                                    style="--d: 0; width:32px; height:32px; object-fit:cover; border-radius:50%; border:2px solid #fff;">
                             </div>
                         </td>
 
@@ -342,8 +341,7 @@ if($projects->num_rows > 0):
                                 ?>
                                     <img src="assets/uploads/<?= $au['avatar'] ?: 'empty-placeholder.png' ?>" 
                                         class="avatar-table rolling-avatar" 
-                                        style="--d: <?= $idx ?>; width:32px; height:32px; object-fit:cover; border-radius:50%; border:2px solid #fff; margin-left: <?= ($idx > 0 ? '-10px' : '0') ?>;"
-                                        onerror="this.onerror=null;this.src='assets/uploads/empty-placeholder.png';">
+                                        style="--d: <?= $idx ?>; width:32px; height:32px; object-fit:cover; border-radius:50%; border:2px solid #fff; margin-left: <?= ($idx > 0 ? '-10px' : '0') ?>;">
                                 <?php $idx++; endforeach; ?>
                             </div>
                         </td>

@@ -70,10 +70,17 @@ $form_progress_id = $progress_id_decoded ?? '';
 $form_project_id = $project_id_decoded ?? '';
 $form_task_id = $task_id_decoded ?? '';
 
+// Fallback: Jika project_id belum terisi tetapi task_id ada, ambil project_id dari database
+if (empty($form_project_id) && !empty($form_task_id)) {
+    $task_p_qry = $conn->query("SELECT project_id FROM task_list WHERE id = " . intval($form_task_id));
+    if ($task_p_qry && $task_p_qry->num_rows > 0) {
+        $form_project_id = $task_p_qry->fetch_assoc()['project_id'];
+    }
+}
 
-// Jika project ID belum ditemukan (misalnya, diakses tanpa PID valid), hentikan.
+// Jika project ID belum ditemukan, coba ambil default atau hentikan.
 if (empty($form_project_id)) {
-    echo "<div class='alert alert-danger p-3 text-center'>Project ID tidak valid.</div>";
+    echo "<div class='alert alert-danger p-3 text-center'>Project ID tidak ditemukan atau tidak valid.</div>";
     exit;
 }
 ?>

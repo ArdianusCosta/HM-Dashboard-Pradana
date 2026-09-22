@@ -47,41 +47,55 @@ $sql = "SELECT e.*, p.name AS project_name
 $params = [];
 $types = "";
 
-// Date range
-if ($start) {
-    $sql .= " AND e.start_event >= ?";
-    $params[] = $start;
-    $types .= "s";
-}
-if ($end) {
-    $sql .= " AND e.end_event <= ?";
-    $params[] = $end;
-    $types .= "s";
-}
-
-// Project filter
-if (!empty($selected_project_encoded)) {
-    $project_id = decode_id($selected_project_encoded); // assume decode_id exists
-    if (in_array($project_id, $allowed_ids)) {
-        $sql .= " AND e.project_id = ?";
-        $params[] = $project_id;
-        $types .= "i";
-    } else {
-        // user not allowed to see this project → return nothing
+if ($login_type == 4) {
+    if (empty($allowed_ids)) {
         echo json_encode([]);
         exit;
     }
+
+    $placeholders = implode(',', array_fill(0, count($allowed_ids), '?'));
+    $sql .= " AND e.project_id IS NOT NULL AND e.project_id IN ($placeholders)";
+    foreach ($allowed_ids as $pid) {
+        $params[] = $pid;
+        $types .= "i";
+    }
 } else {
-    // "All Tasks" – events from any allowed project OR personal events (project_id IS NULL)
-    if (!empty($allowed_ids)) {
-        $placeholders = implode(',', array_fill(0, count($allowed_ids), '?'));
-        $sql .= " AND (e.project_id IN ($placeholders) OR e.project_id IS NULL)";
-        foreach ($allowed_ids as $pid) {
-            $params[] = $pid;
+    // Date range
+    if ($start) {
+        $sql .= " AND e.start_event >= ?";
+        $params[] = $start;
+        $types .= "s";
+    }
+    if ($end) {
+        $sql .= " AND e.end_event <= ?";
+        $params[] = $end;
+        $types .= "s";
+    }
+
+    // Project filter
+    if (!empty($selected_project_encoded)) {
+        $project_id = decode_id($selected_project_encoded); // assume decode_id exists
+        if (in_array($project_id, $allowed_ids)) {
+            $sql .= " AND e.project_id = ?";
+            $params[] = $project_id;
             $types .= "i";
+        } else {
+            // user not allowed to see this project → return nothing
+            echo json_encode([]);
+            exit;
         }
     } else {
-        $sql .= " AND e.project_id IS NULL";
+        // "All Tasks" – events from any allowed project OR personal events (project_id IS NULL)
+        if (!empty($allowed_ids)) {
+            $placeholders = implode(',', array_fill(0, count($allowed_ids), '?'));
+            $sql .= " AND (e.project_id IN ($placeholders) OR e.project_id IS NULL)";
+            foreach ($allowed_ids as $pid) {
+                $params[] = $pid;
+                $types .= "i";
+            }
+        } else {
+            $sql .= " AND e.project_id IS NULL";
+        }
     }
 }
 

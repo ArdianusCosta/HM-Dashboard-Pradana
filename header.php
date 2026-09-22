@@ -14,10 +14,9 @@ if (!ini_get('date.timezone')) {
     <?php 
     $title = isset($title) ? $title : "Dashboard";
     // Ambil variabel sistem dari sesi
-    $system_name = isset($_SESSION['system']['name']) ? $_SESSION['system']['name'] : "Pradana";
-    $browser_title = trim($title . ' | ' . $system_name);
+    $system_name = isset($_SESSION['system']['name']) ? $_SESSION['system']['name'] : "HaiMotion";
     ?>
-    <title><?php echo htmlspecialchars($browser_title, ENT_QUOTES, 'UTF-8'); ?></title>
+    <title><?php echo $title ?> | <?php echo $system_name ?></title>
 
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
     <link rel="stylesheet" href="assets/plugins/fontawesome-free/css/all.min.css">

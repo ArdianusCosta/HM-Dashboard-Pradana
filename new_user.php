@@ -87,6 +87,18 @@
                         </select>
                     </div>
                 </div>
+                <div class="col-md-6 mb-3">
+                    <div class="form-group">
+                        <label class="control-label">
+                            Staff Status <span style="color:#ef4444;font-size:13px;">*</span>
+                        </label>
+                        <select name="status" class="custom-select custom-select-sm">
+                            <option value="1" <?= !isset($status) || $status == 1 ? 'selected' : '' ?>>Aktif</option>
+                            <option value="0" <?= isset($status) && $status == 0 ? 'selected' : '' ?>>Non-Aktif / Resign</option>
+                        </select>
+                        <small class="text-muted">Status Resign otomatis mengeluarkan staff dari seluruh project & group chat (task tidak dihapus).</small>
+                    </div>
+                </div>
                 <?php else: ?>
                     <input type="hidden" name="type" value="3">
                 <?php endif; ?>

@@ -105,12 +105,11 @@ if ($qry->num_rows > 0) {
               <h6 class="text-muted">Created By</h6>
               <?php if ($creator): ?>
               <div class="d-flex align-items-center flex-wrap mt-2">
-                 <img 
-                   src="assets/uploads/<?= !empty($creator['avatar']) ? htmlspecialchars($creator['avatar']) : 'empty-placeholder.png' ?>" 
-                   alt="<?= ucwords($creator['firstname'].' '.$creator['lastname']) ?>" 
-                   class="rounded-circle border border-secondary"
-                   style="width:40px; height:40px; object-fit:cover; margin-right:8px;"
-                   onerror="this.onerror=null;this.src='assets/uploads/empty-placeholder.png';">
+                <img 
+                  src="assets/uploads/<?= !empty($creator['avatar']) ? htmlspecialchars($creator['avatar']) : 'default.png' ?>" 
+                  alt="<?= ucwords($creator['firstname'].' '.$creator['lastname']) ?>" 
+                  class="rounded-circle border border-secondary"
+                  style="width:40px; height:40px; object-fit:cover; margin-right:8px;">
                 <span><?= ucwords($creator['firstname']) ?> <span class="user-lastname"><?= ucwords($creator['lastname']) ?></span></span>
               </div>
               <?php else: ?>
@@ -139,12 +138,11 @@ if ($qry->num_rows > 0) {
               <div class="d-flex align-items-center flex-wrap mt-2 user-avatar-stack-modal">
                 <?php foreach ($task_assigned_users as $au): ?>
                   <img 
-                    src="assets/uploads/<?= !empty($au['avatar']) ? htmlspecialchars($au['avatar']) : 'empty-placeholder.png' ?>" 
+                    src="assets/uploads/<?= !empty($au['avatar']) ? htmlspecialchars($au['avatar']) : 'default.png' ?>" 
                     alt="<?= ucwords($au['firstname'].' '.$au['lastname']) ?>" 
                     class="rounded-circle border border-secondary" 
                     style="width:40px; height:40px; object-fit:cover; margin-right:-8px;" 
-                    title="<?= ucwords($au['firstname'].' '.$au['lastname']) ?>"
-                    onerror="this.onerror=null;this.src='assets/uploads/empty-placeholder.png';">
+                    title="<?= ucwords($au['firstname'].' '.$au['lastname']) ?>">
                 <?php endforeach; ?>
               </div>
                 <?php else: ?>
@@ -229,10 +227,9 @@ if ($qry->num_rows > 0) {
             <div class="card p-3 mb-3 shadow-sm border comment-card">
                 <div class="d-flex align-items-start mb-2">
                     <img class="img-circle img-bordered-sm mr-2" 
-                         src="assets/uploads/<?php echo !empty($comment['avatar']) ? htmlspecialchars($comment['avatar']) : 'empty-placeholder.png' ?>" 
+                         src="assets/uploads/<?php echo !empty($comment['avatar']) ? htmlspecialchars($comment['avatar']) : 'default.png' ?>" 
                          alt="user image"
-                         style="width: 35px; height: 35px; object-fit: cover;"
-                         onerror="this.onerror=null;this.src='assets/uploads/empty-placeholder.png';">
+                         style="width: 35px; height: 35px; object-fit: cover;">
                     
                     <div class="flex-grow-1">
                         <span class="username font-weight-bold d-block">

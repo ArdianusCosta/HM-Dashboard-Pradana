@@ -1,22 +1,27 @@
-<?php
+    <?php
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
-require_once __DIR__ . '/vendor/autoload.php';
+if (file_exists(__DIR__ . '/vendor/autoload.php')) {
+    require_once __DIR__ . '/vendor/autoload.php';
+} elseif (file_exists(__DIR__ . '/../vendor/autoload.php')) {
+    require_once __DIR__ . '/../vendor/autoload.php';
+}
+
 
 /* ==============================
    KONFIGURASI SMTP SERVER
    ============================== */
-define('SMTP_HOST', 'mail.slo-pradana.id');
-define('SMTP_USERNAME', 'dashboard@slo-pradana.id'); 
-define('SMTP_PASSWORD', 's8]Qz2CcmEb~[;j_'); 
+define('SMTP_HOST', 'mail.haimotion.com');
+define('SMTP_USERNAME', 'dashboard@haimotion.com'); 
+define('SMTP_PASSWORD', 'VHF9J}V,?[1%[#Hn'); 
 define('SMTP_PORT', 465);
 define('SMTP_SECURE', 'ssl'); 
 
-define('EMAIL_FROM', 'dashboard@slo-pradana.id');
-define('EMAIL_FROM_NAME', 'Slo-Pradana Dashboard');
-define('APP_BASE_URL', 'https://dashboard.slo-pradana.id/');
-define('MAIL_NAME', 'Slo-Pradana');
+define('EMAIL_FROM', 'dashboard@haimotion.com');
+define('EMAIL_FROM_NAME', 'HaiMotion Dashboard');
+define('APP_BASE_URL', 'https://dashboard.haimotion.com/');
+define('MAIL_NAME', 'HaiMotion');
 
 /* ==============================
    FUNGSI KIRIM EMAIL
@@ -31,6 +36,7 @@ function send_task_notification_email($recipient_email, $recipient_name, $subjec
 
     try {
         $mail->isSMTP();
+        $mail->Timeout    = 3; // 3 second timeout for socket connection to prevent hanging
         $mail->Host       = SMTP_HOST;
         $mail->SMTPAuth   = true;
         $mail->Username   = SMTP_USERNAME;
@@ -120,12 +126,16 @@ function record_notification($user_id, $type, $message, $link, $conn, $send_emai
             Lihat detail di sini: <a href='{$full_link}'>{$full_link}</a>
         ";
 
-        send_task_notification_email(
-            $email_details['email'],
-            $email_details['name'] ?? 'User',
-            $email_details['subject'] ?? 'Notifikasi Baru dari HaiMotion Dashboard',
-            $html_message
-        );
+        try {
+            send_task_notification_email(
+                $email_details['email'],
+                $email_details['name'] ?? 'User',
+                $email_details['subject'] ?? 'Notifikasi Baru dari HaiMotion Dashboard',
+                $html_message
+            );
+        } catch (Throwable $e) {
+            error_log("Email sending error logged: " . $e->getMessage());
+        }
     }
 }
 
