@@ -431,7 +431,7 @@ $chart_series_data = [
         <div class="card shadow-sm border-0 h-100" style="border-radius: 20px; border: none !important;">
             <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center pt-4 px-4 pb-2">
                 <div class="font-weight-bold" style="font-size: 1.1rem; color: #333; letter-spacing: 0.5px;">
-                    TEAM KPI
+                    <i class="fa fa-chart-bar text-primary mr-2"></i>TEAM KPI (OVERVIEW KARYAWAN)
                 </div>
                 <div style="display:flex;gap:12px;align-items:center">
                     <span style="display:flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:#64748b">
@@ -443,14 +443,14 @@ $chart_series_data = [
                 </div>
             </div>
             <div class="card-body px-4 py-2">
-                <div style="position: relative; height: 380px; width: 100%;">
+                <div style="position: relative; height: 340px; width: 100%;">
 
                     <canvas id="overviewBarChart"></canvas>
                 </div>
             </div>
             <div class="card-footer bg-transparent border-0 text-center py-3" style="border-top: 1px dashed #e2e8f0 !important; cursor: pointer;" id="overviewTeamKpiBtn" role="button" tabindex="0">
                 <span style="color: #B75301; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">
-                    <i class="fa fa-eye mr-1"></i> VIEW FULL LIST
+                    <i class="fa fa-eye mr-1"></i> VIEW FULL LIST & RANKING BEST EMPLOYEE
                 </span>
             </div>
         </div>
@@ -580,7 +580,8 @@ $chart_series_data = [
 </div>
 <?php endif; ?>
 
-<?php if ($login_type == 1): 
+<?php /* === KPI PROGRESS TRACK - DISABLED (tidak diperlukan) ===
+if ($login_type == 1):
     // Query all team members (type 2/3) and their task KPI
     $kpi_query = $conn->query("
         SELECT u.id, u.firstname, u.lastname, u.avatar, u.type,
@@ -615,7 +616,8 @@ $chart_series_data = [
         }
     }
     if (!empty($users_kpi_list)):
-?>
+endif; */ ?>
+<?php /* === HTML & CSS KPI Progress Track - DISABLED ===
     <!-- FULL WIDTH KPI PROGRESS TRACK SECTION (ADMIN ONLY) -->
     <div class="row mt-3 mb-4 scroll-motion">
         <div class="col-12">
@@ -681,8 +683,9 @@ $chart_series_data = [
             </div>
         </div>
     </div>
-<?php endif; endif; ?>
+<?php endif; endif; */ ?>
 
+<?php /* CSS KPI Pin - DISABLED
 <style>
 .user-kpi-pin {
     transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), z-index 0.25s ease !important;
@@ -695,6 +698,8 @@ $chart_series_data = [
     box-shadow: 0 8px 20px rgba(0,0,0,0.3) !important;
     border-color: #B75301 !important;
 }
+</style>
+*/ ?>
 
 
 
