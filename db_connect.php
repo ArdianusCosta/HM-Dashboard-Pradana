@@ -2,7 +2,7 @@
 $host = "localhost";
 $username = "sloprada_admin";
 $password = "slopradana21";
-$database = "sloprada__db";
+$database = "sloprada_pradana_db";
 
 // Matikan exception otomatis mysqli agar error dapat ditangani secara manual
 mysqli_report(MYSQLI_REPORT_OFF);
