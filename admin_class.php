@@ -52,7 +52,11 @@ class Action {
         $password = md5($password ?? '');
         $qry = $this->db->query("SELECT *, concat(firstname,' ',lastname) as name FROM users WHERE email = '{$email}' AND password = '{$password}'");
         if ($qry->num_rows > 0) {
-            foreach ($qry->fetch_array() as $key => $value) {
+            $user_data = $qry->fetch_array();
+            if (isset($user_data['status']) && (int)$user_data['status'] === 0) {
+                return 3; // Account deactivated or resigned
+            }
+            foreach ($user_data as $key => $value) {
                 if ($key != 'password' && !is_numeric($key))
                     $_SESSION['login_' . $key] = $value;
             }
@@ -70,6 +74,68 @@ class Action {
         header("location:login.php");
     }
 
+    function kick_user_from_all_projects_and_groups($id_num) {
+        $id_num = (int)$id_num;
+        if ($id_num <= 0) return false;
+
+        // 1. Remove user from group_members (group chat)
+        $this->db->query("DELETE FROM group_members WHERE user_id = {$id_num}");
+
+        // 2. Remove user from project_list.user_ids (CSV string)
+        $this->db->query("
+            UPDATE project_list SET user_ids = TRIM(BOTH ',' FROM 
+                REPLACE(
+                    REPLACE(
+                        REPLACE(
+                            CONCAT(',', user_ids, ','),
+                            ',{$id_num},', ','
+                        ), ',{$id_num},', ','
+                    ), ',,', ','
+                )
+            )
+            WHERE user_ids LIKE '%{$id_num}%'
+        ");
+
+        // NOTE: Tasks in task_list are NOT modified/deleted so historical task data remains intact.
+        return true;
+    }
+
+    function toggle_user_status() {
+        extract($_POST);
+        if (empty($id)) return 0;
+        $id_num = decode_id($id);
+        if (!$id_num) return 0;
+        
+        $status = isset($status) ? (int)$status : 0;
+        
+        // Auto update firstname with [RESIGN] tag
+        $u_qry = $this->db->query("SELECT firstname FROM users WHERE id = {$id_num}");
+        if ($u_qry && $u_qry->num_rows > 0) {
+            $u_row = $u_qry->fetch_assoc();
+            $fname = $u_row['firstname'];
+            if ($status === 0) {
+                if (stripos($fname, '[RESIGN]') === false) {
+                    $new_fname = '[RESIGN] ' . trim($fname);
+                    $new_fname_esc = $this->db->real_escape_string($new_fname);
+                    $this->db->query("UPDATE users SET firstname = '{$new_fname_esc}' WHERE id = {$id_num}");
+                }
+            } else {
+                $new_fname = trim(preg_replace('/^\[RESIGN\]\s*/i', '', $fname));
+                $new_fname_esc = $this->db->real_escape_string($new_fname);
+                $this->db->query("UPDATE users SET firstname = '{$new_fname_esc}' WHERE id = {$id_num}");
+            }
+        }
+
+        $update = $this->db->query("UPDATE users SET status = {$status} WHERE id = {$id_num}");
+        if ($update) {
+            if ($status === 0) {
+                $this->kick_user_from_all_projects_and_groups($id_num);
+            }
+            return 1;
+        }
+        return 0;
+    }
+
     function save_user() {
         extract($_POST);
         $data = "";
@@ -79,9 +145,14 @@ class Action {
         foreach ($_POST as $k => $v) {
             if (!in_array($k, ['id','password','cpass']) && !is_numeric($k)) {
                 $v = $this->db->real_escape_string($v);
-                if ($k == 'type') $v = (int)$v;
+                if ($k == 'type' || $k == 'status') $v = (int)$v;
                 $data .= (empty($data)) ? " $k='{$v}' " : ", $k='{$v}' ";
             }
+        }
+
+        // Default status = 1 (Active) if new user and status not set
+        if (!$is_update && !isset($_POST['status'])) {
+            $data .= ", status=1 ";
         }
 
         // Password
@@ -133,11 +204,18 @@ class Action {
 
         if (!$is_update) {
             $save = $this->db->query("INSERT INTO users SET {$data}");
+            $user_id = $this->db->insert_id;
         } else {
             $save = $this->db->query("UPDATE users SET {$data} WHERE id={$id}");
+            $user_id = $id;
         }
 
         if ($save) {
+            // Kick user from projects & group chats if status is non-active (0)
+            if (isset($_POST['status']) && (int)$_POST['status'] === 0 && !empty($user_id)) {
+                $this->kick_user_from_all_projects_and_groups($user_id);
+            }
+
             if (!empty($id) && isset($_SESSION['login_id']) && $_SESSION['login_id'] == $id) {
 
                 // Update firstname (biar topbar ikut berubah)
@@ -213,16 +291,14 @@ class Action {
             // 7) hapus progress
             $this->db->query("DELETE FROM user_productivity WHERE user_id = {$id_num}");
 
-            // 8) update task
-            $this->db->query("UPDATE task_list SET created_by = NULL WHERE created_by = {$id_num}");
+            // 8) update task - PRESERVE task_list (do NOT clear created_by or user_ids)
 
             // 9) update project
             $this->db->query("UPDATE project_list SET manager_id = NULL WHERE manager_id = {$id_num}");
 
-            // 10) hapus dari CSV id
+            // 10) hapus dari CSV id di project_list (kick dari project membership)
             $tables_csv = [
-                'project_list' => 'user_ids',
-                'task_list' => 'user_ids'
+                'project_list' => 'user_ids'
             ];
 
             foreach ($tables_csv as $tbl => $col) {
@@ -260,7 +336,7 @@ class Action {
         $data = "";
         foreach ($_POST as $k => $v) {
             if (!in_array($k, array('id', 'user_ids')) && !is_numeric($k)) {
-                if ($k == 'description') $v = htmlentities(str_replace("'", "&#x2019;", $v));
+                if ($k == 'description') $v = clean_html_entities($v);
                 $v = $this->db->real_escape_string($v);
                 $data .= (empty($data)) ? " $k='{$v}' " : ", $k='{$v}' ";
             }
@@ -412,8 +488,6 @@ class Action {
         $_SESSION['notification']['message'] = 'Proyek **' . htmlspecialchars($new_name) . '** berhasil diduplikasi beserta seluruh tugasnya! 📋';
         return 1;
     }
-
-
 
     // === TASK MANAGEMENT ===
     function save_task() {
@@ -742,7 +816,10 @@ class Action {
                             $ids_str = implode(',', $filtered);
                             $users_q = $this->db->query("SELECT id, email, notification_email, firstname, lastname FROM users WHERE id IN ({$ids_str})");
                             
-                            $current_user_name = ucwords($_SESSION['login_firstname'] . ' ' . $_SESSION['login_lastname']);
+                            $user_fname = $_SESSION['login_firstname'] ?? $_SESSION['login_name'] ?? '';
+                            $user_lname = $_SESSION['login_lastname'] ?? '';
+                            $current_user_name = ucwords(trim($user_fname . ' ' . $user_lname));
+                            if (empty($current_user_name)) $current_user_name = 'User';
                             $link = "index.php?page=view_task&id=" . (function_exists('encode_id') ? encode_id($task_id) : $task_id);
                             $message = "Task **{$task_name}** mendapat komentar baru dari {$current_user_name}.";
                             $email_subject = "[KOMENTAR BARU] Task: {$task_name}";
@@ -1489,6 +1566,86 @@ class Action {
         } catch (Exception $e) {
             return json_encode(['unread_count' => 0, 'error' => $e->getMessage()]);
         }
+    }
+    
+    // === TEAM KPI OVERVIEW ===
+    function get_overview_kpi() {
+        if (!isset($_SESSION['login_id']) || (int)($_SESSION['login_type'] ?? 0) >= 4) {
+            return json_encode(['status' => 0, 'message' => 'Access denied']);
+        }
+
+        $month = $_POST['month'] ?? $_GET['month'] ?? 'all';
+        
+        $where_date = "";
+        if (!empty($month) && $month !== 'all') {
+            $month_escaped = $this->db->real_escape_string($month);
+            $where_date = " AND (DATE_FORMAT(date_created, '%Y-%m') = '{$month_escaped}' OR DATE_FORMAT(end_date, '%Y-%m') = '{$month_escaped}') ";
+        }
+        
+        $users_qry = $this->db->query("
+            SELECT id, firstname, lastname, avatar, type 
+            FROM users 
+            WHERE type IN (1, 2, 3) 
+              AND (status IS NULL OR status = 1)
+              AND firstname NOT LIKE '[RESIGN]%'
+              AND firstname NOT LIKE '[Resign]%'
+              AND lastname NOT LIKE '[RESIGN]%'
+              AND lastname NOT LIKE '[Resign]%'
+            ORDER BY firstname ASC
+        ");
+        
+        $user_list = [];
+        if ($users_qry && $users_qry->num_rows > 0) {
+            while ($u = $users_qry->fetch_assoc()) {
+                $uid = $u['id'];
+                
+                $t_qry = $this->db->query("SELECT status FROM task_list WHERE FIND_IN_SET('{$uid}', REPLACE(user_ids, ' ', '')) > 0 {$where_date}");
+                $assigned = $t_qry ? $t_qry->num_rows : 0;
+                $done = 0;
+                if ($t_qry && $assigned > 0) {
+                    while ($t = $t_qry->fetch_assoc()) {
+                        if ((int)$t['status'] === 5) {
+                            $done++;
+                        }
+                    }
+                }
+                
+                $kpi_pct = $assigned > 0 ? round(($done / $assigned) * 100, 1) : 0;
+                $avatar_path = !empty($u['avatar']) && is_file('assets/uploads/'.$u['avatar']) ? 'assets/uploads/'.$u['avatar'] : 'assets/uploads/empty-placeholder.png';
+                $name = ucwords(trim($u['firstname'] . ' ' . $u['lastname']));
+                $role = $u['type'] == 1 ? 'Admin' : ($u['type'] == 2 ? 'Project Manager' : 'Employee');
+                $job_title = $role;
+                
+                $encoder = function_exists('encode_id') ? 'encode_id' : function($i) { return base64_encode($i); };
+
+                $user_list[] = [
+                    'id' => $uid,
+                    'encoded_id' => $encoder($uid),
+                    'name' => $name,
+                    'avatar' => $avatar_path,
+                    'job_title' => $job_title,
+                    'assigned' => $assigned,
+                    'done' => $done,
+                    'kpi_pct' => $kpi_pct
+                ];
+            }
+        }
+        
+        usort($user_list, function($a, $b) {
+            if ($a['done'] !== $b['done']) return $b['done'] <=> $a['done'];
+            if ($a['kpi_pct'] !== $b['kpi_pct']) return $b['kpi_pct'] <=> $a['kpi_pct'];
+            return $b['assigned'] <=> $a['assigned'];
+        });
+        
+        foreach ($user_list as $index => &$item) {
+            $item['rank'] = $index + 1;
+        }
+        
+        return json_encode([
+            'status' => 1,
+            'month' => $month,
+            'data' => $user_list
+        ]);
     }
     
     // 12. Destructor

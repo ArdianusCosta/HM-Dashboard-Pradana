@@ -92,11 +92,30 @@ $overall_kpi = $total_assigned_overall > 0 ? round(($total_done_overall / $total
 $user_avatar = !empty($user_row['avatar']) && is_file('assets/uploads/'.$user_row['avatar']) ? 'assets/uploads/'.$user_row['avatar'] : 'assets/uploads/empty-placeholder.png';
 ?>
 
+<style>
+  #uni_modal {
+      overflow-y: auto !important;
+  }
+  #uni_modal .modal-dialog {
+      max-height: 92vh;
+  }
+  #uni_modal .modal-content {
+      max-height: 92vh;
+      display: flex;
+      flex-direction: column;
+  }
+  #uni_modal .modal-body {
+      max-height: calc(92vh - 65px) !important;
+      overflow-y: auto !important;
+      -webkit-overflow-scrolling: touch;
+  }
+</style>
+
 <div class="container-fluid p-2">
   <!-- USER HEADER WITH EXPORT EXCEL & EXPORT PDF BUTTONS -->
   <div class="d-flex align-items-center justify-content-between p-3 mb-3 bg-white rounded shadow-sm border flex-wrap" style="gap: 10px;">
     <div class="d-flex align-items-center">
-      <img src="<?= $user_avatar ?>" class="rounded-circle border mr-3" style="width: 55px; height: 55px; object-fit: cover;" onerror="this.onerror=null;this.src='assets/uploads/empty-placeholder.png';">
+      <img src="<?= $user_avatar ?>" class="rounded-circle border mr-3" style="width: 55px; height: 55px; object-fit: cover;">
       <div>
         <h5 class="font-weight-bold mb-1" style="color: #1a1714;"><?= htmlspecialchars(ucwords($user_row['firstname'] . ' ' . $user_row['lastname'])) ?></h5>
         <span class="badge badge-amber text-white px-2 py-1" style="background-color:#B75301; font-size:11px;"><?= $type_arr[$user_row['type']] ?? 'Employee' ?></span>

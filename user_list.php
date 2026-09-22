@@ -18,9 +18,9 @@ const Toast = Swal.mixin({
 
 <?php
   /* ── Stat counts ── */
-  $total_users = $conn->query("SELECT COUNT(*) as c FROM users")->fetch_assoc()['c'];
-  $total_emp   = $conn->query("SELECT COUNT(*) as c FROM users WHERE type = 3")->fetch_assoc()['c'];
-  $total_admin = $conn->query("SELECT COUNT(*) as c FROM users WHERE type = 1")->fetch_assoc()['c'];
+  $total_users    = $conn->query("SELECT COUNT(*) as c FROM users")->fetch_assoc()['c'];
+  $total_active   = $conn->query("SELECT COUNT(*) as c FROM users WHERE status = 1 OR status IS NULL")->fetch_assoc()['c'];
+  $total_resigned = $conn->query("SELECT COUNT(*) as c FROM users WHERE status = 0")->fetch_assoc()['c'];
 ?>
 
 <div class="container-fluid um-page-header-wrap">
@@ -30,7 +30,7 @@ const Toast = Swal.mixin({
         <h4 class="fw-bold um-title">User Management</h4>
         <p class="um-subtitle">Manage and monitor all system users</p>
       </div>
-    </div>
+    </div>x 
     <div class="col-md-6">
       <div class="d-flex justify-content-end">
         <?php if(isset($_SESSION['login_type']) && $_SESSION['login_type'] < 3): ?>
@@ -70,23 +70,23 @@ const Toast = Swal.mixin({
         </svg>
       </div>
       <div>
-        <div class="um-stat-label">Employees</div>
-        <div class="um-stat-value"><?= $total_emp ?></div>
+        <div class="um-stat-label">Active Users</div>
+        <div class="um-stat-value"><?= $total_active ?></div>
       </div>
     </div>
   
     <div class="um-stat-card">
-      <div class="um-stat-icon um-icon-blue">
+      <div class="um-stat-icon um-icon-blue" style="background: rgba(239, 68, 68, 0.1); color: #ef4444;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="8" r="3.5"/>
-          <path d="M4.5 20.5c0-4 3.358-7 7.5-7s7.5 3 7.5 7"/>
-          <path d="M15 6.2A3.5 3.5 0 0116.5 9a3.5 3.5 0 01-1 2.45"/>
-          <path d="M18 20.5c0-2.5 1.5-4.5 3-5.5"/>
+          <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+          <circle cx="8.5" cy="7" r="4"/>
+          <line x1="18" y1="8" x2="23" y2="13"/>
+          <line x1="23" y1="8" x2="18" y2="13"/>
         </svg>
       </div>
       <div>
-        <div class="um-stat-label">Admins</div>
-        <div class="um-stat-value"><?= $total_admin ?></div>
+        <div class="um-stat-label">Resign / Inactive</div>
+        <div class="um-stat-value"><?= $total_resigned ?></div>
       </div>
     </div>
   </div>
@@ -101,6 +101,7 @@ const Toast = Swal.mixin({
           <th>Name</th>
           <th class="text-center">Email</th>
           <th class="text-center">Role</th>
+          <th class="text-center">Status</th>
           <th class="text-center">Action</th>
         </tr>
       </thead>
@@ -112,15 +113,23 @@ const Toast = Swal.mixin({
           while($row= $qry->fetch_assoc()):
             $avatar = !empty($row['avatar']) ? 'assets/uploads/'.$row['avatar'] : 'assets/uploads/empty-placeholder.png';
             $encoded_id = encode_id($row['id']);
+            $user_status = isset($row['status']) ? (int)$row['status'] : 1;
         ?>
         <tr data-firstname="<?php echo htmlspecialchars(ucwords($row['firstname'])) ?>" data-lastname="<?php echo htmlspecialchars(ucwords($row['lastname'])) ?>">
           <th class="text-center"><?php echo $i++ ?></th>
           <td class="text-center">
-            <img src="<?php echo $avatar ?>" alt="Avatar" width="40" height="40" class="rounded-circle" onerror="this.onerror=null;this.src='assets/uploads/empty-placeholder.png';">
+            <img src="<?php echo $avatar ?>" alt="Avatar" width="40" height="40" class="rounded-circle">
           </td>
           <td><b><?php echo ucwords($row['firstname']) ?> <span class="user-lastname"><?php echo ucwords($row['lastname']) ?></span></b></td>
           <td class="text-center"><b><?php echo $row['email'] ?></b></td>
           <td class="text-center"><b><em><?php echo $type[$row['type']] ?></em></b></td>
+          <td class="text-center" data-search="<?php echo $user_status === 1 ? 'Aktif Active' : 'Resign Resigned Resight Non-Aktif Nonaktif Inactive Kick'; ?>">
+            <?php if($user_status === 1): ?>
+              <span class="badge badge-success px-2 py-1"><i class="fa fa-check-circle mr-1"></i>Aktif</span>
+            <?php else: ?>
+              <span class="badge badge-danger px-2 py-1"><i class="fa fa-user-slash mr-1"></i>Resign / Non-Aktif</span>
+            <?php endif; ?>
+          </td>
           <td class="text-center">
             <div class="dropdown">
               <button type="button" class="btn p-0" data-toggle="dropdown">
@@ -135,7 +144,17 @@ const Toast = Swal.mixin({
                   <i class="fa fa-cog mr-2"></i> Edit
                 </a>
                 <div class="dropdown-divider"></div>
-                <a class="dropdown-item text-danger delete_user_trigger" href="javascript:void(0)" data-id="<?php echo $encoded_id ?>" data-name="<?php echo ucwords($row['name']) ?>">
+                <?php if($user_status === 1): ?>
+                  <a class="dropdown-item text-warning toggle_status_btn" href="javascript:void(0)" data-id="<?php echo $encoded_id ?>" data-status="0" data-name="<?php echo htmlspecialchars(ucwords($row['name'])) ?>" data-avatar="<?php echo !empty($row['avatar']) && is_file('assets/uploads/'.$row['avatar']) ? 'assets/uploads/'.$row['avatar'] : 'assets/uploads/empty-placeholder.png' ?>" data-role="<?php echo htmlspecialchars($type_arr[$row['type']] ?? 'User') ?>">
+                    <i class="fa fa-user-minus mr-2"></i> Set Resign / Kick
+                  </a>
+                <?php else: ?>
+                  <a class="dropdown-item text-success toggle_status_btn" href="javascript:void(0)" data-id="<?php echo $encoded_id ?>" data-status="1" data-name="<?php echo htmlspecialchars(ucwords($row['name'])) ?>" data-avatar="<?php echo !empty($row['avatar']) && is_file('assets/uploads/'.$row['avatar']) ? 'assets/uploads/'.$row['avatar'] : 'assets/uploads/empty-placeholder.png' ?>" data-role="<?php echo htmlspecialchars($type_arr[$row['type']] ?? 'User') ?>">
+                    <i class="fa fa-user-check mr-2"></i> Aktifkan Kembali
+                  </a>
+                <?php endif; ?>
+                <div class="dropdown-divider"></div>
+                <a class="dropdown-item text-danger delete_user_trigger" href="javascript:void(0)" data-id="<?php echo $encoded_id ?>" data-name="<?php echo htmlspecialchars(ucwords($row['name'])) ?>" data-avatar="<?php echo !empty($row['avatar']) && is_file('assets/uploads/'.$row['avatar']) ? 'assets/uploads/'.$row['avatar'] : 'assets/uploads/empty-placeholder.png' ?>" data-role="<?php echo htmlspecialchars($type_arr[$row['type']] ?? 'User') ?>">
                   <i class="fa fa-trash mr-2"></i> Delete
                 </a>
               </div>
@@ -154,20 +173,98 @@ const Toast = Swal.mixin({
 </div>
 
 <!-- Delete Confirmation Modal -->
-<div class="modal fade" id="confirmDeleteModal" tabindex="-1" role="dialog" aria-hidden="true">
-  <div class="modal-dialog" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title text-danger"><i class="fa fa-trash"></i> Konfirmasi Hapus</h5>
-        <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+<div class="modal fade" id="confirmDeleteModal" tabindex="-1" role="dialog" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 480px;">
+    <div class="modal-content border-0 shadow-lg" style="border-radius: 20px; overflow: hidden; background: #ffffff;">
+      
+      <!-- Header with status badge & icon -->
+      <div class="modal-header border-0 pb-0 pt-4 px-4 d-flex flex-column align-items-center text-center position-relative">
+        <button type="button" class="close position-absolute" data-dismiss="modal" aria-label="Close" style="top: 15px; right: 20px; outline: none; opacity: 0.5;">
+          <span aria-hidden="true" style="font-size: 22px;">&times;</span>
+        </button>
+        
+        <div class="d-flex align-items-center justify-content-center mb-3" style="width: 68px; height: 68px; border-radius: 50%; background-color: #fee2e2; color: #dc3545;">
+          <i class="fa fa-trash-alt fa-2x"></i>
+        </div>
+        
+        <h5 class="modal-title font-weight-bold" id="confirmDeleteModalLabel" style="font-size: 1.2rem; color: #1e293b; letter-spacing: -0.3px;">Hapus User Permanen?</h5>
+        <span class="badge badge-danger mt-2 px-3 py-1" style="font-size: 10px; font-weight: 700; letter-spacing: 0.5px; border-radius: 12px; text-transform: uppercase;">PERMANENT DELETE</span>
       </div>
-      <div class="modal-body">
-        Apakah Anda yakin ingin menghapus user: <b id="deleteUserName"></b>?
+      
+      <div class="modal-body px-4 py-3">
+        <!-- Target User Card Box -->
+        <div class="d-flex align-items-center p-3 mb-3 rounded-lg border" style="border-radius: 14px !important; background-color: #f8fafc; border-color: #e2e8f0 !important;">
+          <img id="deleteUserAvatar" src="assets/uploads/empty-placeholder.png" class="rounded-circle border mr-3" style="width: 46px; height: 46px; object-fit: cover; background-color: #fff;">
+          <div class="text-truncate">
+            <div id="deleteUserName" class="font-weight-bold text-dark text-truncate" style="font-size: 14.5px;"></div>
+            <small id="deleteUserRole" class="text-muted d-block text-truncate" style="font-size: 12px;"></small>
+          </div>
+        </div>
+
+        <!-- Warning Box -->
+        <div class="alert border-0 p-3 mb-0" style="border-radius: 12px; font-size: 12.5px; line-height: 1.5; background-color: #fef2f2; color: #991b1b; border: 1px solid #fecaca !important;">
+          <i class="fa fa-exclamation-triangle mr-2"></i>
+          <span>Apakah Anda yakin ingin menghapus user ini? Tindakan ini <b>tidak dapat dibatalkan</b> dan seluruh data user akan terhapus dari sistem.</span>
+        </div>
       </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" data-dismiss="modal">Batal</button>
-        <button class="btn btn-danger" id="confirmDeleteBtn">Hapus</button>
+      
+      <div class="modal-footer border-0 px-4 pb-4 pt-2 d-flex justify-content-end" style="gap: 10px;">
+        <button type="button" class="btn btn-light font-weight-bold px-4 py-2" data-dismiss="modal" style="border-radius: 10px; font-size: 13px; color: #64748b; background-color: #f1f5f9; border: 1px solid #e2e8f0;">
+          Batal
+        </button>
+        <button type="button" class="btn btn-danger font-weight-bold px-4 py-2 text-white shadow-sm" id="confirmDeleteBtn" style="border-radius: 10px; font-size: 13px; border: none; background: linear-gradient(135deg, #dc3545 0%, #b02a37 100%);">
+          <i class="fa fa-trash-alt mr-2"></i> Hapus User
+        </button>
       </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Toggle User Status (Resign / Kick / Aktifkan) Modal -->
+<div class="modal fade" id="toggleStatusModal" tabindex="-1" role="dialog" aria-labelledby="toggleStatusModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 480px;">
+    <div class="modal-content border-0 shadow-lg" style="border-radius: 20px; overflow: hidden; background: #ffffff;">
+      
+      <!-- Header with status badge & icon -->
+      <div class="modal-header border-0 pb-0 pt-4 px-4 d-flex flex-column align-items-center text-center position-relative">
+        <button type="button" class="close position-absolute" data-dismiss="modal" aria-label="Close" style="top: 15px; right: 20px; outline: none; opacity: 0.5;">
+          <span aria-hidden="true" style="font-size: 22px;">&times;</span>
+        </button>
+        
+        <div id="toggleIconContainer" class="d-flex align-items-center justify-content-center mb-3" style="width: 68px; height: 68px; border-radius: 50%; transition: all 0.3s ease;">
+          <i id="toggleStatusIcon" class="fa fa-2x"></i>
+        </div>
+        
+        <h5 class="modal-title font-weight-bold" id="toggleStatusModalLabel" style="font-size: 1.2rem; color: #1e293b; letter-spacing: -0.3px;"></h5>
+        <span id="toggleStatusBadge" class="badge mt-2 px-3 py-1" style="font-size: 10px; font-weight: 700; letter-spacing: 0.5px; border-radius: 12px; text-transform: uppercase;"></span>
+      </div>
+      
+      <div class="modal-body px-4 py-3">
+        <!-- Target User Card Box -->
+        <div class="d-flex align-items-center p-3 mb-3 rounded-lg border" style="border-radius: 14px !important; background-color: #f8fafc; border-color: #e2e8f0 !important;">
+          <img id="toggleUserAvatar" src="" class="rounded-circle border mr-3" style="width: 46px; height: 46px; object-fit: cover; background-color: #fff;">
+          <div class="text-truncate">
+            <div id="toggleUserName" class="font-weight-bold text-dark text-truncate" style="font-size: 14.5px;"></div>
+            <small id="toggleUserRole" class="text-muted d-block text-truncate" style="font-size: 12px;"></small>
+          </div>
+        </div>
+
+        <!-- Warning / Information Box -->
+        <div id="toggleStatusAlert" class="alert border-0 p-3 mb-0" style="border-radius: 12px; font-size: 12.5px; line-height: 1.5;">
+          <i id="toggleAlertIcon" class="fa fa-info-circle mr-2"></i>
+          <span id="toggleStatusText"></span>
+        </div>
+      </div>
+      
+      <div class="modal-footer border-0 px-4 pb-4 pt-2 d-flex justify-content-end" style="gap: 10px;">
+        <button type="button" class="btn btn-light font-weight-bold px-4 py-2" data-dismiss="modal" style="border-radius: 10px; font-size: 13px; color: #64748b; background-color: #f1f5f9; border: 1px solid #e2e8f0;">
+          Batal
+        </button>
+        <button type="button" class="btn font-weight-bold px-4 py-2 text-white shadow-sm" id="confirmToggleStatusBtn" style="border-radius: 10px; font-size: 13px; border: none;">
+        </button>
+      </div>
+
     </div>
   </div>
 </div>
@@ -748,12 +845,17 @@ function buildMobileUserLayout() {
       $('.action-menu').hide();
     }
   });
-  // Delete action
+  // Delete action (mobile)
   $(document).off('click', '.delete-action').on('click', '.delete-action', function(e) {
     e.preventDefault();
     var id = $(this).data('id');
     var name = $(this).data('name');
+    var avatar = $(this).data('avatar') || 'assets/uploads/empty-placeholder.png';
+    var role = $(this).data('role') || 'User';
+
     $('#deleteUserName').text(name);
+    $('#deleteUserAvatar').attr('src', avatar);
+    $('#deleteUserRole').text(role);
     $('#confirmDeleteBtn').data('id', id);
     $('#confirmDeleteModal').modal('show');
   });
@@ -790,14 +892,22 @@ $(document).ready(function(){
   $(document).on('click', '.delete_user_trigger', function(){
     var id = $(this).data('id');
     var name = $(this).data('name');
+    var avatar = $(this).data('avatar') || 'assets/uploads/empty-placeholder.png';
+    var role = $(this).data('role') || 'User';
+
     $('#deleteUserName').text(name);
+    $('#deleteUserAvatar').attr('src', avatar);
+    $('#deleteUserRole').text(role);
     $('#confirmDeleteBtn').data('id', id);
     $('#confirmDeleteModal').modal('show');
   });
   // Confirm delete
   $('#confirmDeleteBtn').click(function(){
     var id = $(this).data('id');
-    $('#confirmDeleteModal').modal('hide');
+    var $btn = $(this);
+    var originalHtml = $btn.html();
+    $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin mr-2"></i> Menghapus...');
+
     $.ajax({
       url:'ajax.php?action=delete_user',
       method:'POST',
@@ -805,14 +915,27 @@ $(document).ready(function(){
       success:function(resp){
         resp = (typeof resp === 'string') ? resp.trim() : resp;
         if (resp == 1) {
-          alert_toast("User delete success.", "success");
-          setTimeout(function() { location.replace('index.php?page=user_list'); }, 1000);
+          if (typeof toastr !== 'undefined') {
+            toastr.success('User berhasil dihapus.');
+          }
+          $('#confirmDeleteModal').modal('hide');
+          setTimeout(function() { location.replace('index.php?page=user_list'); }, 800);
         } else {
-          Swal.fire({ icon:'error', title:'Gagal menghapus', html:'<pre>'+resp+'</pre>' });
+          $btn.prop('disabled', false).html(originalHtml);
+          if (typeof toastr !== 'undefined') {
+            toastr.error('Gagal menghapus user: ' + resp);
+          } else {
+            alert('Gagal menghapus user: ' + resp);
+          }
         }
       },
       error:function(xhr){
-        Swal.fire({ icon:'error', title:'AJAX Error', text:xhr.statusText });
+        $btn.prop('disabled', false).html(originalHtml);
+        if (typeof toastr !== 'undefined') {
+          toastr.error('AJAX Error: ' + xhr.statusText);
+        } else {
+          alert('AJAX Error: ' + xhr.statusText);
+        }
       }
     });
   });
@@ -962,6 +1085,115 @@ $(document).ready(function(){
           setTimeout(() => location.reload(), 2000);
         } else if (resp == 2) {
           Swal.fire({ icon: 'error', title: 'Gagal', text: 'Email sudah digunakan.' });
+        }
+      }
+    });
+  });
+
+  let currentToggleTarget = { id: null, status: null };
+
+  $(document).on('click', '.toggle_status_btn', function(){
+    let id = $(this).attr('data-id');
+    let status = $(this).attr('data-status');
+    let name = $(this).attr('data-name');
+    let avatar = $(this).attr('data-avatar') || 'assets/uploads/empty-placeholder.png';
+    let role = $(this).attr('data-role') || 'User';
+
+    currentToggleTarget = { id: id, status: status };
+
+    $('#toggleUserName').text(name);
+    $('#toggleUserAvatar').attr('src', avatar);
+    $('#toggleUserRole').text(role);
+
+    if (status == 0) {
+      // RESIGN / KICK MODE
+      $('#toggleIconContainer').css({
+        'background-color': '#fee2e2',
+        'color': '#dc3545'
+      });
+      $('#toggleStatusIcon').attr('class', 'fa fa-user-times');
+      $('#toggleStatusModalLabel').text('Set User Resign / Kick?');
+      $('#toggleStatusBadge')
+        .attr('class', 'badge badge-danger px-3 py-1')
+        .text('NON-AKTIFKAN / RESIGN');
+      
+      $('#toggleStatusAlert')
+        .css({
+          'background-color': '#fef2f2',
+          'color': '#991b1b',
+          'border': '1px solid #fecaca'
+        });
+      $('#toggleAlertIcon').attr('class', 'fa fa-exclamation-triangle mr-2');
+      $('#toggleStatusText').html('User <b>' + name + '</b> akan dikeluarkan dari seluruh project & group chat aktif. Seluruh data task buatan dan histori assignment user tetap tersimpan utuh.');
+      
+      $('#confirmToggleStatusBtn')
+        .attr('class', 'btn btn-danger font-weight-bold px-4 py-2 text-white shadow-sm')
+        .css('background', 'linear-gradient(135deg, #dc3545 0%, #b02a37 100%)')
+        .html('<i class="fa fa-user-times mr-2"></i> Ya, Set Resign');
+    } else {
+      // AKTIFKAN KEMBALI MODE
+      $('#toggleIconContainer').css({
+        'background-color': '#dcfce7',
+        'color': '#16a34a'
+      });
+      $('#toggleStatusIcon').attr('class', 'fa fa-user-check');
+      $('#toggleStatusModalLabel').text('Aktifkan Kembali User?');
+      $('#toggleStatusBadge')
+        .attr('class', 'badge badge-success px-3 py-1')
+        .text('AKTIFKAN KEMBALI');
+      
+      $('#toggleStatusAlert')
+        .css({
+          'background-color': '#f0fdf4',
+          'color': '#166534',
+          'border': '1px solid #bbf7d0'
+        });
+      $('#toggleAlertIcon').attr('class', 'fa fa-check-circle mr-2');
+      $('#toggleStatusText').html('User <b>' + name + '</b> akan diaktifkan kembali. User dapat kembali login ke dashboard dan mengakses fitur sesuai hak aksesnya.');
+      
+      $('#confirmToggleStatusBtn')
+        .attr('class', 'btn btn-success font-weight-bold px-4 py-2 text-white shadow-sm')
+        .css('background', 'linear-gradient(135deg, #28a745 0%, #15803d 100%)')
+        .html('<i class="fa fa-user-check mr-2"></i> Ya, Aktifkan Kembali');
+    }
+
+    $('#toggleStatusModal').modal('show');
+  });
+
+  $('#confirmToggleStatusBtn').on('click', function(){
+    if (!currentToggleTarget.id) return;
+    
+    let $btn = $(this);
+    let originalHtml = $btn.html();
+    $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin mr-2"></i> Memproses...');
+
+    $.ajax({
+      url: 'ajax.php?action=toggle_user_status',
+      method: 'POST',
+      data: { id: currentToggleTarget.id, status: currentToggleTarget.status },
+      success: function(resp){
+        if(resp == 1){
+          if (typeof toastr !== 'undefined') {
+            toastr.success('Status user berhasil diperbarui.');
+          }
+          $('#toggleStatusModal').modal('hide');
+          setTimeout(() => location.reload(), 800);
+        } else {
+          $btn.prop('disabled', false).html(originalHtml);
+          if (typeof toastr !== 'undefined') {
+            toastr.error('Gagal memperbarui status user.');
+          } else {
+            alert('Gagal memperbarui status user.');
+          }
+        }
+      },
+      error: function(err){
+        $btn.prop('disabled', false).html(originalHtml);
+        console.log(err);
+        if (typeof toastr !== 'undefined') {
+          toastr.error('Terjadi kesalahan sistem.');
+        } else {
+          alert('Terjadi kesalahan sistem.');
         }
       }
     });

@@ -268,7 +268,7 @@ $chart_series_data = [
                   </div>
 
                   <div id="lineChartDaily" style="min-height: 300px;"></div>
-               </div>
+              </div>
             </div>
         </div>
       
@@ -284,9 +284,9 @@ $chart_series_data = [
                         // Logika filter tetap utuh (tidak ada perubahan fungsi)
                         $activity_where = " WHERE 1=1 "; 
                         if ($login_type == 2) {
-                            $activity_where .= " AND (a.user_id = '$user_id' OR a.project_id IN (SELECT id FROM project_list WHERE manager_id = '$user_id' OR FIND_IN_SET('$user_id', user_ids) > 0)) ";
+                            $activity_where .= " AND (a.user_id = '$user_id' OR a.project_id IS NULL OR a.project_id IN (SELECT id FROM project_list WHERE manager_id = '$user_id' OR FIND_IN_SET('$user_id', user_ids) > 0)) ";
                         } elseif ($login_type == 3) {
-                            $activity_where .= " AND (a.user_id = '$user_id' OR a.project_id IN (SELECT id FROM project_list WHERE FIND_IN_SET('$user_id', user_ids) > 0)) ";
+                            $activity_where .= " AND (a.user_id = '$user_id' OR a.project_id IS NULL OR a.project_id IN (SELECT id FROM project_list WHERE FIND_IN_SET('$user_id', user_ids) > 0)) ";
                         }
 
                         $logs = $conn->query("
@@ -312,13 +312,27 @@ $chart_series_data = [
                                     $actor_lastname = implode(' ', $actor_name_parts);
                                     $avatar = !empty($log['avatar']) ? 'assets/uploads/'.$log['avatar'] : 'assets/uploads/empty-placeholder.png';
                                 }
-                                switch ((int)$log['task_status']) {
-                                    case 5: $color = '#4c9a2a'; break; 
-                                    case 4: $color = '#c62828'; break; 
-                                    case 3: $color = '#e66a00'; break; 
-                                    case 2: $color = '#95c0dc'; break; 
-                                    case 1: $color = '#f3dc80'; break; 
-                                    default: $color = '#3a495c'; break; 
+
+                                $act_type = $log['activity_type'] ?? '';
+                                if (strpos($act_type, 'event_') === 0) {
+                                    if ($act_type === 'event_add') {
+                                        $color = '#28a745'; 
+                                    } elseif ($act_type === 'event_update') {
+                                        $color = '#17a2b8'; 
+                                    } elseif ($act_type === 'event_delete') {
+                                        $color = '#dc3545'; 
+                                    } else {
+                                        $color = '#6f42c1'; 
+                                    }
+                                } else {
+                                    switch ((int)$log['task_status']) {
+                                        case 5: $color = '#4c9a2a'; break; 
+                                        case 4: $color = '#c62828'; break; 
+                                        case 3: $color = '#e66a00'; break; 
+                                        case 2: $color = '#95c0dc'; break; 
+                                        case 1: $color = '#f3dc80'; break; 
+                                        default: $color = '#3a495c'; break; 
+                                    }
                                 }
                         ?>
                         <li class="timeline-item activity-item" 
@@ -328,11 +342,15 @@ $chart_series_data = [
                                 onclick="uni_modal('Task Details','get_task_detail.php?id=<?= encode_id($log['task_id']) ?>', 'mid-large')"
                                 onmouseover="this.style.backgroundColor='#f5f5f5';"
                                 onmouseout="this.style.backgroundColor='transparent';"
+                            <?php elseif (strpos($act_type, 'event_') === 0): ?>
+                                onclick="location.href='index.php?page=task_calendar';"
+                                onmouseover="this.style.backgroundColor='#f5f5f5';"
+                                onmouseout="this.style.backgroundColor='transparent';"
                             <?php endif; ?>>
                             
                             <span class="timeline-badge" style="background: <?= $color ?>;"></span>
                             <div class="d-flex align-items-center mb-1">
-                                <img src="<?= $avatar ?>" class="avatar" style="width: 30px; height: 30px; border-radius: 50%; margin-right: 8px;" onerror="this.onerror=null;this.src='assets/uploads/empty-placeholder.png';">
+                                <img src="<?= $avatar ?>" class="avatar" style="width: 30px; height: 30px; border-radius: 50%; margin-right: 8px;">
                                 <div>
                                     <strong><?php if (!empty($actor_lastname)): ?><?= htmlspecialchars(ucwords($actor_firstname)) ?> <span class="user-lastname"><?= htmlspecialchars(ucwords($actor_lastname)) ?></span><?php else: ?><?= htmlspecialchars($actor_firstname) ?><?php endif; ?></strong><br>
                                     <small class="text-muted"><?= date('d M, H:i', strtotime($log['created_at'])) ?></small>
@@ -359,122 +377,221 @@ $chart_series_data = [
  </div>
 
 <?php if ($login_type == 1): 
-    // Query all team members (type 2/3) and their task KPI
-    $kpi_query = $conn->query("
+    // Data query for initial Team KPI overview across all projects
+    $ov_kpi_qry = $conn->query("
         SELECT u.id, u.firstname, u.lastname, u.avatar, u.type,
-               COUNT(t.id) as total_tasks,
-               SUM(CASE WHEN t.status = 5 THEN 1 ELSE 0 END) as done_tasks
+               COUNT(t.id) as assigned,
+               SUM(CASE WHEN t.status = 5 THEN 1 ELSE 0 END) as done
         FROM users u
-        LEFT JOIN task_list t ON FIND_IN_SET(u.id, t.user_ids) > 0
-        WHERE u.type IN (2,3)
+        LEFT JOIN task_list t ON FIND_IN_SET(u.id, REPLACE(t.user_ids, ' ', '')) > 0
+        WHERE u.type IN (1, 2, 3)
+          AND (u.status IS NULL OR u.status = 1)
+          AND u.firstname NOT LIKE '[RESIGN]%'
+          AND u.firstname NOT LIKE '[Resign]%'
+          AND u.lastname NOT LIKE '[RESIGN]%'
+          AND u.lastname NOT LIKE '[Resign]%'
         GROUP BY u.id
-        ORDER BY u.firstname ASC
+        ORDER BY done DESC, assigned DESC, firstname ASC
     ");
     
-    $users_kpi_list = [];
-    if ($kpi_query && $kpi_query->num_rows > 0) {
-        while ($member = $kpi_query->fetch_assoc()) {
-            $total_t = (int)$member['total_tasks'];
-            $done_t = (int)$member['done_tasks'];
-            $kpi_pct = $total_t > 0 ? round(($done_t / $total_t) * 100, 1) : 0;
+    $ov_user_metrics = [];
+    $ov_bar_labels = [];
+    $ov_bar_assigned = [];
+    $ov_bar_done = [];
+    
+    if ($ov_kpi_qry && $ov_kpi_qry->num_rows > 0) {
+        while ($u_row = $ov_kpi_qry->fetch_assoc()) {
+            $assigned_cnt = (int)$u_row['assigned'];
+            $done_cnt = (int)$u_row['done'];
+            $pct = $assigned_cnt > 0 ? round(($done_cnt / $assigned_cnt) * 100, 1) : 0;
+            $av_path = !empty($u_row['avatar']) && is_file('assets/uploads/'.$u_row['avatar']) ? 'assets/uploads/'.$u_row['avatar'] : 'assets/uploads/empty-placeholder.png';
+            $full_name = ucwords(trim($u_row['firstname'] . ' ' . $u_row['lastname']));
+            $role_name = ($u_row['type'] == 1 ? 'Admin' : ($u_row['type'] == 2 ? 'Project Manager' : 'Employee'));
             
-            $member_avatar = !empty($member['avatar']) && is_file('assets/uploads/'.$member['avatar']) ? 'assets/uploads/'.$member['avatar'] : 'assets/uploads/empty-placeholder.png';
-            $member_name = ucwords(trim($member['firstname'] . ' ' . $member['lastname']));
-            
-            $users_kpi_list[] = [
-                'id' => $member['id'],
-                'encoded_id' => encode_id($member['id']),
-                'name' => $member_name,
-                'avatar' => $member_avatar,
-                'total' => $total_t,
-                'done' => $done_t,
-                'kpi' => $kpi_pct
+            $ov_user_metrics[] = [
+                'id' => $u_row['id'],
+                'encoded_id' => encode_id($u_row['id']),
+                'name' => $full_name,
+                'avatar' => $av_path,
+                'job_title' => $role_name,
+                'assigned' => $assigned_cnt,
+                'done' => $done_cnt,
+                'kpi_pct' => $pct
             ];
+            
+            $name_parts = explode(' ', trim($u_row['firstname'] . ' ' . $u_row['lastname']));
+            $short_name = $name_parts[0];
+            if (count($name_parts) > 1 && !empty($name_parts[1])) {
+                $short_name .= ' ' . mb_substr($name_parts[1], 0, 1) . '.';
+            }
+            $ov_bar_labels[] = $short_name;
+            $ov_bar_assigned[] = $assigned_cnt;
+            $ov_bar_done[] = $done_cnt;
         }
     }
-    if (!empty($users_kpi_list)):
+    
+    $ov_bar_labels_json = json_encode($ov_bar_labels);
+    $ov_bar_assigned_json = json_encode($ov_bar_assigned);
+    $ov_bar_done_json = json_encode($ov_bar_done);
 ?>
-    <!-- FULL WIDTH KPI PROGRESS TRACK SECTION (ADMIN ONLY) -->
-    <div class="row mt-3 mb-4 scroll-motion">
-        <div class="col-12">
-            <div class="card shadow-sm border-0" style="border-radius: 20px;">
-                <div class="card-body p-4">
-                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap" style="gap: 10px;">
-                        <div>
-                            <h5 class="font-weight-bold mb-1" style="color: #333;">
-                                <i class="fa fa-chart-line text-warning mr-2"></i> KPI Progress Track
-                            </h5>
-                            <p class="text-muted mb-0" style="font-size: 13px;">
-                                Pantau posisi pencapaian KPI setiap anggota tim secara real-time. Klik foto profil untuk melihat rincian KPI proyek & tugas.
-                            </p>
-                        </div>
-                    </div>
 
-                    <!-- Full Width Track Line -->
-                    <div class="position-relative bg-light rounded-lg border mt-3" style="min-height: 145px; padding: 55px 30px 45px 30px;">
-                        <div class="progress" style="height: 14px; background-color: #e2e8f0; border-radius: 14px; position: relative; overflow: visible;">
-                            <div class="progress-bar" role="progressbar" style="width: 100%; background: linear-gradient(90deg, #ef4444 0%, #ef4444 30%, #3b82f6 30%, #3b82f6 70%, #22c55e 70%, #22c55e 100%); border-radius: 14px; opacity: 0.85;"></div>
-                            
-                            <!-- Milestone labels -->
-                            <div class="d-flex justify-content-between w-100 position-absolute" style="top: -30px; left: 0; padding: 0 5px; font-size: 11px; font-weight: 700;">
-                                <span style="color: #ef4444;"><i class="fa fa-flag mr-1"></i>0%</span>
-                                <span style="color: #ef4444;">30%</span>
-                                <span style="color: #3b82f6;">70%</span>
-                                <span style="color: #22c55e;"><i class="fa fa-trophy mr-1"></i>100%</span>
-                            </div>
-
-                            <!-- Avatar Pins along the line -->
-                            <?php foreach($users_kpi_list as $index => $u_kpi): 
-                                $left_percent = min(max($u_kpi['kpi'], 2), 98);
-                                if ($u_kpi['kpi'] < 30) {
-                                    $badge_bg = '#ef4444'; // Merah (0-30%)
-                                } elseif ($u_kpi['kpi'] < 70) {
-                                    $badge_bg = '#3b82f6'; // Biru (30-70%)
-                                } else {
-                                    $badge_bg = '#22c55e'; // Hijau (70-100%)
-                                }
-                                $z_index = 10 + ($index % 20);
-                            ?>
-                                <div class="user-kpi-pin position-absolute" 
-                                     style="left: <?= $left_percent ?>%; top: 50%; transform: translate(-50%, -50%); cursor: pointer; z-index: <?= $z_index ?>;"
-                                     data-id="<?= $u_kpi['encoded_id'] ?>"
-                                     data-name="<?= htmlspecialchars($u_kpi['name']) ?>"
-                                     title="<?= htmlspecialchars($u_kpi['name']) ?>: <?= $u_kpi['kpi'] ?>% KPI (<?= $u_kpi['done'] ?>/<?= $u_kpi['total'] ?> Tasks)"
-                                     data-toggle="tooltip">
-                                    <div class="avatar-wrapper position-relative">
-                                        <img src="<?= $u_kpi['avatar'] ?>" 
-                                             alt="<?= htmlspecialchars($u_kpi['name']) ?>" 
-                                             class="rounded-circle border border-white shadow-sm user-pin-img"
-                                             style="width: 44px; height: 44px; object-fit: cover; background-color: #fff;"
-                                             onerror="this.onerror=null;this.src='assets/uploads/empty-placeholder.png';">
-                                        <span class="badge badge-pill position-absolute" 
-                                              style="bottom: -11px; left: 50%; transform: translateX(-50%); font-size: 9px; font-weight: 700; padding: 2px 6px; background: <?= $badge_bg ?>; color: #fff; border: 1.5px solid #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
-                                            <?= $u_kpi['kpi'] ?>%
-                                        </span>
-                                    </div>
-                                </div>
-                            <?php endforeach; ?>
-                        </div>
-                    </div>
+<!-- TEAM KPI (ALL PROJECTS) SECTION -->
+<div class="row mt-3 mb-4 scroll-motion">
+    <div class="col-12 mb-3">
+        <div class="card shadow-sm border-0 h-100" style="border-radius: 20px; border: none !important;">
+            <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center pt-4 px-4 pb-2">
+                <div class="font-weight-bold" style="font-size: 1.1rem; color: #333; letter-spacing: 0.5px;">
+                    <i class="fa fa-chart-bar text-primary mr-2"></i>TEAM KPI (OVERVIEW KARYAWAN)
                 </div>
+                <div style="display:flex;gap:12px;align-items:center">
+                    <span style="display:flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:#64748b">
+                        <span style="width:10px;height:10px;border-radius:3px;background:#007bff;display:inline-block"></span>Assigned
+                    </span>
+                    <span style="display:flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:#64748b">
+                        <span style="width:10px;height:10px;border-radius:3px;background:#28a745;display:inline-block"></span>Done
+                    </span>
+                </div>
+            </div>
+            <div class="card-body px-4 py-2">
+                <div style="position: relative; height: 340px; width: 100%;">
+                    <canvas id="overviewBarChart"></canvas>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent border-0 text-center py-3" style="border-top: 1px dashed #e2e8f0 !important; cursor: pointer;" id="overviewTeamKpiBtn" role="button" tabindex="0">
+                <span style="color: #B75301; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">
+                    <i class="fa fa-eye mr-1"></i> VIEW FULL LIST & RANKING BEST EMPLOYEE
+                </span>
             </div>
         </div>
     </div>
-    <style>
-    .user-kpi-pin {
-        transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), z-index 0.25s ease !important;
-    }
-    .user-kpi-pin:hover {
-        z-index: 999 !important;
-        transform: translate(-50%, -50%) scale(1.35) !important;
-    }
-    .user-kpi-pin:hover .user-pin-img {
-        box-shadow: 0 8px 20px rgba(0,0,0,0.3) !important;
-        border-color: #B75301 !important;
-    }
+</div>
 
-    </style>
-<?php endif; endif; ?>
+<!-- TEAM KPI - FULL LIST MODAL (OVERVIEW) -->
+<div class="modal fade" id="kpiOverviewModal" tabindex="-1" role="dialog" aria-labelledby="kpiOverviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content" style="border-radius:20px; border:none; overflow:hidden; box-shadow: 0 15px 50px rgba(0,0,0,0.2);">
+            <div class="modal-header text-white" style="background: linear-gradient(135deg, #B75301 0%, #8f4001 100%); border:none; padding: 18px 24px;">
+                <h5 class="modal-title font-weight-bold d-flex align-items-center mb-0" id="kpiOverviewModalLabel" style="font-size:1.15rem;">
+                    <i class="fa fa-trophy text-warning mr-2" style="font-size:1.3rem;"></i>
+                    Team KPI &mdash; All Projects (Best Employee Guideline)
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close" style="opacity:1;">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body p-0">
+                <!-- Month Filter Bar -->
+                <div class="d-flex justify-content-between align-items-center px-4 py-3 bg-light border-bottom flex-wrap" style="gap:12px;">
+                    <div class="d-flex align-items-center">
+                        <span class="font-weight-bold text-dark mr-2" style="font-size: 14px;">Periode:</span>
+                        <select id="kpiMonthSelect" class="custom-select custom-select-sm" style="width: auto; border-radius: 8px; font-weight: 700; border-color: #B75301; color: #B75301; cursor: pointer;">
+                            <option value="all" selected>Semua Waktu (All Time)</option>
+                            <option value="<?= date('Y-m') ?>">Bulan Ini (<?= date('F Y') ?>)</option>
+                            <option value="<?= date('Y-m', strtotime('-1 month')) ?>">Bulan Lalu (<?= date('F Y', strtotime('-1 month')) ?>)</option>
+                            <?php
+                            for ($m = 2; $m < 12; $m++) {
+                                $ym = date('Y-m', strtotime("-$m month"));
+                                $label = date('F Y', strtotime("-$m month"));
+                                echo "<option value='{$ym}'>{$label}</option>";
+                            }
+                            ?>
+                        </select>
+                    </div>
+                    <div class="text-muted small">
+                        <i class="fa fa-star text-warning mr-1"></i> Pedoman Penilaian Employee of the Month
+                    </div>
+                </div>
+
+                <div id="kpiOverviewPrintable">
+                    <div class="p-4 pb-2 text-center">
+                        <h4 class="font-weight-bold mb-1" style="color:#333;">Laporan Team KPI & Ranking Best Employee</h4>
+                        <p class="text-muted mb-0" style="font-size:13px;" id="kpiReportSubtitle">
+                            Agregasi Seluruh Project &middot; Dibuat pada <?php echo date("d F Y") ?>
+                        </p>
+                    </div>
+
+                    <div class="table-responsive px-4 pb-4 pt-2">
+                        <table class="table table-hover align-middle m-0" id="kpiOverviewTable" style="width:100%;">
+                            <thead>
+                                <tr style="background-color:#f8f9fa; border-bottom: 2px solid #dee2e6;">
+                                    <th class="text-center py-3 border-0" style="font-weight:800; color:#495057; text-transform:uppercase; font-size:11px; width:8%;">RANK</th>
+                                    <th class="text-left py-3 border-0" style="font-weight:800; color:#495057; text-transform:uppercase; font-size:11px; width:34%;">TEAM MEMBER</th>
+                                    <th class="text-center py-3 border-0" style="font-weight:800; color:#495057; text-transform:uppercase; font-size:11px; width:14%;">ASSIGNED</th>
+                                    <th class="text-center py-3 border-0" style="font-weight:800; color:#495057; text-transform:uppercase; font-size:11px; width:14%;">DONE</th>
+                                    <th class="text-left py-3 border-0" style="font-weight:800; color:#495057; text-transform:uppercase; font-size:11px; width:22%;">COMPLETION</th>
+                                    <th class="text-center py-3 border-0" style="font-weight:800; color:#495057; text-transform:uppercase; font-size:11px; width:8%;">ACTION</th>
+                                </tr>
+                            </thead>
+                            <tbody id="kpiOverviewTbody">
+                                <?php
+                                $ki_idx = 1;
+                                foreach ($ov_user_metrics as $item):
+                                    $kpi_pct = $item['kpi_pct'];
+                                    $rank = $ki_idx++;
+                                    $rank_badge = '<b>' . $rank . '</b>';
+                                    $best_badge = '';
+                                    
+                                    if ($rank === 1 && $item['done'] > 0) {
+                                        $rank_badge = '<span class="badge badge-warning text-dark px-2 py-1" style="font-size:12px;"><i class="fa fa-trophy mr-1"></i> #1</span>';
+                                        $best_badge = '<span class="badge badge-pill ml-2 px-2 py-1" style="background:#B75301; color:#fff; font-size:10px; font-weight:700;"><i class="fa fa-star mr-1"></i>BEST EMPLOYEE</span>';
+                                    } elseif ($rank === 2 && $item['done'] > 0) {
+                                        $rank_badge = '<span class="badge badge-secondary px-2 py-1" style="font-size:12px;">#2</span>';
+                                    } elseif ($rank === 3 && $item['done'] > 0) {
+                                        $rank_badge = '<span class="badge badge-light border text-dark px-2 py-1" style="font-size:12px;">#3</span>';
+                                    }
+                                ?>
+                                <tr style="border-bottom:1px solid #f0f0f0;">
+                                    <td class="text-center align-middle"><?= $rank_badge ?></td>
+                                    <td class="text-left align-middle">
+                                        <div class="d-flex align-items-center">
+                                            <img src="<?= $item['avatar'] ?>" class="rounded-circle border mr-3" style="width:40px; height:40px; object-fit:cover;">
+                                            <div>
+                                                <div style="font-weight:700; color:#333; font-size:14px;">
+                                                    <?= $item['name'] ?> <?= $best_badge ?>
+                                                </div>
+                                                <small class="text-muted"><?= $item['job_title'] ?></small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="text-center align-middle font-weight-bold" style="font-size:14px; color:#007bff;"><?= $item['assigned'] ?></td>
+                                    <td class="text-center align-middle font-weight-bold" style="font-size:14px; color:#28a745;"><?= $item['done'] ?></td>
+                                    <td class="align-middle">
+                                        <div class="progress" style="height:8px; margin-bottom:4px; background-color:#e9ecef; border-radius:10px;">
+                                            <div class="progress-bar" role="progressbar" style="width:<?= $kpi_pct ?>%; background:linear-gradient(90deg,#CD874D 10%,#B75301 80%); border-radius:10px;"></div>
+                                        </div>
+                                        <small style="display:block; color:#555; font-size:11px; font-weight:600;"><?= $kpi_pct ?>% Complete</small>
+                                    </td>
+                                    <td class="text-center align-middle">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary uni-kpi-detail" data-id="<?= $item['encoded_id'] ?>" data-name="<?= htmlspecialchars($item['name']) ?>" title="Lihat Detail User">
+                                            <i class="fa fa-eye"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <?php endforeach; ?>
+                                <?php if (empty($ov_user_metrics)): ?>
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-4">Belum ada data tugas anggota tim.</td>
+                                </tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="border:none; background:#fafafa; padding: 14px 24px;">
+                <button type="button" class="btn btn-secondary px-4" data-dismiss="modal" style="border-radius:10px; font-weight:700; font-size:12px; text-transform:uppercase;">Close</button>
+                <button type="button" class="btn text-white px-4" id="kpiOverviewSavePdfBtn" style="background-color:#B75301; border-radius:10px; font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:0.5px; border:none; box-shadow:0 4px 14px rgba(183,83,1,0.25);">
+                    <i class="fa fa-file-pdf-o mr-1"></i> Save as PDF
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
+
+
+
 
 <style>
 /* --- Animasi Sambutan Baru --- */
@@ -1124,7 +1241,7 @@ while($proj = $projects->fetch_assoc()){
                             <small class="text-muted d-block">Project Manager</small>
                             <?php if($p['manager']): ?>
                                 <div class="d-flex align-items-center">
-                                     <img src="<?= $p['manager']['avatar'] ?>" class="rounded-circle border mr-2" style="width:35px; height:35px; object-fit:cover;" onerror="this.onerror=null;this.src='assets/uploads/empty-placeholder.png';">
+                                    <img src="<?= $p['manager']['avatar'] ?>" class="rounded-circle border mr-2" style="width:35px; height:35px; object-fit:cover;">
                                     <strong class="text-truncate" title="<?= $p['manager']['name'] ?>"><?= ucwords(explode(' ', $p['manager']['name'])[0]) ?> <span class="user-lastname"><?= ucwords(array_slice(explode(' ', $p['manager']['name']), 1) ? implode(' ', array_slice(explode(' ', $p['manager']['name']), 1)) : '') ?></span></strong>
                                 </div>
                             <?php else: ?>
@@ -1135,7 +1252,7 @@ while($proj = $projects->fetch_assoc()){
                         <div class="d-flex flex-wrap align-items-center mt-1 assignment-list">
                             <?php if(!empty($p['members'])): ?>
                                 <?php foreach($p['members'] as $m): ?>
-                                     <img src="<?= $m['avatar'] ?>" class="rounded-circle border border-white avatar-member" style="width:30px; height:30px; object-fit:cover;" title="<?= $m['name'] ?>" onerror="this.onerror=null;this.src='assets/uploads/empty-placeholder.png';">
+                                    <img src="<?= $m['avatar'] ?>" class="rounded-circle border border-white avatar-member" style="width:30px; height:30px; object-fit:cover;" title="<?= $m['name'] ?>">
                                 <?php endforeach; ?>
                             <?php else: ?>
                                 <span class="text-muted">No Members</span>
@@ -1334,11 +1451,192 @@ $(document).ready(function(){
     }
 });
 
-$(document).on('click', '.user-kpi-pin', function(e){
-    e.preventDefault();
-    var encodedId = $(this).data('id');
+
+
+// === OVERVIEW TEAM KPI BAR CHART & MODAL JS ===
+var ovBarChart = null;
+
+function renderOverviewBarChart(labels, assignedData, doneData) {
+    var canvas = document.getElementById('overviewBarChart');
+    if (!canvas) return;
+    var ctx = canvas.getContext('2d');
+    
+    if (ovBarChart) {
+        ovBarChart.destroy();
+    }
+    
+    ovBarChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Tasks Assigned',
+                    data: assignedData,
+                    backgroundColor: '#007bff',
+                    borderColor: '#007bff',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Tasks Done',
+                    data: doneData,
+                    backgroundColor: '#28a745',
+                    borderColor: '#28a745',
+                    borderWidth: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle' } },
+            scales: {
+                yAxes: [{ ticks: { beginAtZero: true, stepSize: 1 } }],
+                xAxes: [{ ticks: { display: true }, gridLines: { display: false }, barPercentage: 0.8, categoryPercentage: 0.6 }]
+            }
+        }
+    });
+}
+
+<?php if (isset($ov_bar_labels_json)): ?>
+$(document).ready(function(){
+    renderOverviewBarChart(<?= $ov_bar_labels_json ?>, <?= $ov_bar_assigned_json ?>, <?= $ov_bar_done_json ?>);
+});
+<?php endif; ?>
+
+$('#overviewTeamKpiBtn').on('click', function(){
+    $('#kpiOverviewModal').modal('show');
+});
+
+$('#kpiMonthSelect').on('change', function(){
+    var selectedMonth = $(this).val();
+    $.ajax({
+        url: 'ajax.php?action=get_overview_kpi',
+        method: 'POST',
+        data: { month: selectedMonth },
+        dataType: 'json',
+        success: function(resp) {
+            if (resp && resp.status === 1) {
+                var data = resp.data;
+                var $tbody = $('#kpiOverviewTbody');
+                $tbody.empty();
+                
+                if (!data || data.length === 0) {
+                    $tbody.append('<tr><td colspan="6" class="text-center text-muted py-4">Tidak ada data KPI anggota tim untuk periode ini.</td></tr>');
+                    renderOverviewBarChart([], [], []);
+                    return;
+                }
+                
+                var labels = [];
+                var assignedData = [];
+                var doneData = [];
+                
+                $.each(data, function(idx, item) {
+                    labels.push(item.name.split(' ')[0]);
+                    assignedData.push(item.assigned);
+                    doneData.push(item.done);
+                    
+                    var rank = idx + 1;
+                    var rankBadge = '<b>' + rank + '</b>';
+                    var bestBadge = '';
+                    
+                    if (rank === 1 && item.done > 0) {
+                        rankBadge = '<span class="badge badge-warning text-dark px-2 py-1" style="font-size:12px;"><i class="fa fa-trophy mr-1"></i> #1</span>';
+                        bestBadge = '<span class="badge badge-pill ml-2 px-2 py-1" style="background:#B75301; color:#fff; font-size:10px; font-weight:700;"><i class="fa fa-star mr-1"></i>BEST EMPLOYEE</span>';
+                    } else if (rank === 2 && item.done > 0) {
+                        rankBadge = '<span class="badge badge-secondary px-2 py-1" style="font-size:12px;">#2</span>';
+                    } else if (rank === 3 && item.done > 0) {
+                        rankBadge = '<span class="badge badge-light border text-dark px-2 py-1" style="font-size:12px;">#3</span>';
+                    }
+                    
+                    var rowHtml = `
+                        <tr style="border-bottom:1px solid #f0f0f0;">
+                            <td class="text-center align-middle">${rankBadge}</td>
+                            <td class="text-left align-middle">
+                                <div class="d-flex align-items-center">
+                                    <img src="${item.avatar}" class="rounded-circle border mr-3" style="width:40px; height:40px; object-fit:cover;">
+                                    <div>
+                                        <div style="font-weight:700; color:#333; font-size:14px;">
+                                            ${item.name} ${bestBadge}
+                                        </div>
+                                        <small class="text-muted">${item.job_title}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="text-center align-middle font-weight-bold" style="font-size:14px; color:#007bff;">${item.assigned}</td>
+                            <td class="text-center align-middle font-weight-bold" style="font-size:14px; color:#28a745;">${item.done}</td>
+                            <td class="align-middle">
+                                <div class="progress" style="height:8px; margin-bottom:4px; background-color:#e9ecef; border-radius:10px;">
+                                    <div class="progress-bar" role="progressbar" style="width:${item.kpi_pct}%; background:linear-gradient(90deg,#CD874D 10%,#B75301 80%); border-radius:10px;"></div>
+                                </div>
+                                <small style="display:block; color:#555; font-size:11px; font-weight:600;">${item.kpi_pct}% Complete</small>
+                            </td>
+                            <td class="text-center align-middle">
+                                <button type="button" class="btn btn-sm btn-outline-secondary uni-kpi-detail" data-id="${item.encoded_id}" data-name="${item.name}" title="Lihat Detail User">
+                                    <i class="fa fa-eye"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                    $tbody.append(rowHtml);
+                });
+                
+                renderOverviewBarChart(labels, assignedData, doneData);
+            }
+        }
+    });
+});
+
+$(document).on('click', '.uni-kpi-detail', function(){
+    var id = $(this).data('id');
     var name = $(this).data('name');
-    uni_modal("<i class='fa fa-chart-line mr-2'></i> Team KPI Breakdown &mdash; " + name, "view_user_kpi.php?id=" + encodedId, "large");
+    var $kpiModal = $('#kpiOverviewModal');
+    
+    var openDetailModal = function() {
+        uni_modal("<i class='fa fa-chart-line mr-2'></i> Team KPI Breakdown &mdash; " + name, "view_user_kpi.php?id=" + id, "large");
+        setTimeout(function(){
+            $('body').addClass('modal-open');
+        }, 350);
+    };
+
+    if ($kpiModal.length && $kpiModal.hasClass('show')) {
+        $kpiModal.one('hidden.bs.modal', function() {
+            openDetailModal();
+        }).modal('hide');
+    } else {
+        openDetailModal();
+    }
+});
+
+$('#kpiOverviewSavePdfBtn').click(function(){
+    var content = $('#kpiOverviewPrintable').clone();
+    content.find('.progress').css({'border': '1px solid #000', 'background': 'none'});
+    content.find('.progress-bar').css({'background-color': '#000', 'background-image': 'none'});
+    content.find('.btn, button').remove();
+
+    var printWindow = window.open('', '', 'width=900,height=600');
+    var headContent = `
+        <html>
+            <head>
+                <title>Laporan Team KPI & Best Employee - All Projects</title>
+                <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+                <style>
+                    body { font-family: Arial, sans-serif; padding: 20px; }
+                    table { width: 100%; border-collapse: collapse; }
+                    th, td { border: 1px solid #333; padding: 8px; text-align: left; font-size: 12px; }
+                    .text-center { text-align: center; }
+                </style>
+            </head>
+            <body>
+    `;
+
+    printWindow.document.write(headContent + content.html() + '</body></html>');
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(function(){
+        printWindow.print();
+        printWindow.close();
+    }, 1000);
 });
 </script>
 
