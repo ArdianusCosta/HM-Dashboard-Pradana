@@ -28,6 +28,12 @@ if ($check_status_col && mysqli_num_rows($check_status_col) == 0) {
     @mysqli_query($conn, "ALTER TABLE users ADD COLUMN status TINYINT(1) NOT NULL DEFAULT 1 COMMENT '1=Aktif, 0=Resign/Non-Aktif' AFTER type");
 }
 
+// Auto Migration: Add job_title column to users table if missing
+$check_jobtitle_col = @mysqli_query($conn, "SHOW COLUMNS FROM users LIKE 'job_title'");
+if ($check_jobtitle_col && mysqli_num_rows($check_jobtitle_col) == 0) {
+    @mysqli_query($conn, "ALTER TABLE users ADD COLUMN job_title VARCHAR(100) NULL DEFAULT NULL AFTER status");
+}
+
 // Auto Migration: Ensure tables use utf8mb4 for emoji support
 @mysqli_query($conn, "ALTER TABLE project_list CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
 @mysqli_query($conn, "ALTER TABLE task_list CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");

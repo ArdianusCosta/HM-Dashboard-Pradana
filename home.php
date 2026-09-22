@@ -379,7 +379,8 @@ $chart_series_data = [
 <?php if ($login_type == 1): 
     // Data query for initial Team KPI overview across all projects
     $ov_kpi_qry = $conn->query("
-        SELECT u.id, u.firstname, u.lastname, u.avatar, u.type, u.job_title,
+        SELECT u.id, u.firstname, u.lastname, u.avatar, u.type,
+               IFNULL(u.job_title, '') as job_title,
                COUNT(t.id) as assigned,
                SUM(CASE WHEN t.status = 5 THEN 1 ELSE 0 END) as done
         FROM users u
@@ -388,6 +389,11 @@ $chart_series_data = [
         GROUP BY u.id
         ORDER BY done DESC, assigned DESC, firstname ASC
     ");
+
+    // Log error jika query gagal (untuk debugging)
+    if (!$ov_kpi_qry) {
+        error_log('[HOME KPI] Query error: ' . $conn->error);
+    }
     
     $ov_user_metrics = [];
     $ov_bar_labels = [];
