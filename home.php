@@ -1212,7 +1212,7 @@ function observeChartContainer(selector) {
                 $encoded_proj_id = encode_id($row['id']); 
         ?>
                   <a href="index.php?page=view_project&id=<?php echo $encoded_proj_id; ?>" class="card p-3 shadow-sm project-card" data-id="<?php echo $row['id'] ?>" style="min-width: 280px; cursor: pointer; text-decoration: none; color: inherit;">
-                    <h6 class="font-weight-bold text-truncate"><?php echo ucwords($row['name']) ?></h6>
+                    <h6 class="font-weight-bold text-truncate"><?php echo ucwords(fix_mojibake($row['name'])) ?></h6>
                     <p class="mb-2 text-muted small">Due: <?php echo date("d M Y", strtotime($row['end_date'])) ?></p>
                     <canvas id="<?php echo $chart_id ?>" height="180"></canvas>
                   </a>

@@ -174,7 +174,7 @@ $qry = $conn->query("SELECT * FROM project_list $where ORDER BY name ASC");
         
         <?php if(isset($_SESSION['login_type']) && $_SESSION['login_type'] < 4): ?>
         <div style="width: 25%;" class="pl-4">
-            <h6 class="font-weight-bold mb-0 text-dark"><?= ucwords($row['name']) ?></h6>
+            <h6 class="font-weight-bold mb-0 text-dark"><?= ucwords(fix_mojibake($row['name'])) ?></h6>
             <small class="text-muted">Due: <?= date("Y-m-d", strtotime($row['end_date'])) ?></small>
         </div>
 
@@ -196,7 +196,7 @@ $qry = $conn->query("SELECT * FROM project_list $where ORDER BY name ASC");
         </div>
         <?php else: ?>
         <div style="width: 40%;" class="pl-4">
-            <h6 class="font-weight-bold mb-0 text-dark"><?= ucwords($row['name']) ?></h6>
+            <h6 class="font-weight-bold mb-0 text-dark"><?= ucwords(fix_mojibake($row['name'])) ?></h6>
             <small class="text-muted">Due: <?= date("Y-m-d", strtotime($row['end_date'])) ?></small>
         </div>
 

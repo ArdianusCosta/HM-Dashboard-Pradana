@@ -1,4 +1,8 @@
 <?php 
+if (!headers_sent()) {
+    @header('Content-Type: text/html; charset=UTF-8');
+}
+
 $host = "localhost";
 $username = "sloprada_admin";
 $password = "slopradana21";
@@ -7,12 +11,15 @@ $database = "sloprada_pradana_db";
 // Matikan exception otomatis mysqli agar error dapat ditangani secara manual
 mysqli_report(MYSQLI_REPORT_OFF);
 
-// Buat koneksi ke database
+// Buat koneksi ke database (coba dengan kredensial hosting)
 $conn = @mysqli_connect($host, $username, $password, $database);
 
-// Jika gagal pada localhost (misal user hosting belum dibuat di MySQL lokal), coba fallback ke root
+// Jika gagal pada localhost, coba fallback ke root dengan database lokal
 if (!$conn && ($host === 'localhost' || $host === '127.0.0.1')) {
-    $conn = @mysqli_connect($host, "root", "", $database);
+    $conn = @mysqli_connect($host, "root", "", "sloprada_pradana_db");
+    if (!$conn) {
+        $conn = @mysqli_connect($host, "root", "", "haimoti2_db");
+    }
 }
 
 // Periksa koneksi dan tampilkan pesan error spesifik
@@ -20,6 +27,7 @@ if (!$conn) {
     die("Koneksi gagal: " . mysqli_connect_error());
 }
 mysqli_set_charset($conn, "utf8mb4");
+mysqli_query($conn, "SET names 'utf8mb4'");
 mysqli_query($conn, "SET time_zone = '+07:00'");
 
 // Auto Migration: Add status column to users table if missing
@@ -42,6 +50,54 @@ if ($check_jobtitle_col && mysqli_num_rows($check_jobtitle_col) == 0) {
 
 // Auto Migration: Fix question mark emojis in project names
 @mysqli_query($conn, "UPDATE project_list SET name = '❗ 💻 Hai Motion - IT Division 💻 ❗' WHERE name LIKE '%IT Division%' AND (name LIKE '%?%' OR name LIKE '%?????%')");
+
+if (!function_exists('fix_mojibake')) {
+    function fix_mojibake($str) {
+        if (empty($str) || !is_string($str)) return $str;
+        $curr = $str;
+        for ($i = 0; $i < 3; $i++) {
+            $has_mojibake = (
+                strpos($curr, "\xC3\xA2") !== false || 
+                strpos($curr, "\xC3\x83") !== false || 
+                strpos($curr, "â€") !== false || 
+                strpos($curr, "â ") !== false || 
+                strpos($curr, "â□") !== false || 
+                strpos($curr, "ï¸") !== false || 
+                strpos($curr, "â€¼") !== false ||
+                strpos($curr, "âš") !== false ||
+                strpos($curr, "âœ") !== false
+            );
+            if (!$has_mojibake) break;
+
+            $try_cp1252 = @mb_convert_encoding($curr, 'Windows-1252', 'UTF-8');
+            if ($try_cp1252 && mb_check_encoding($try_cp1252, 'UTF-8') && $try_cp1252 !== $curr) {
+                $curr = $try_cp1252;
+                continue;
+            }
+
+            $try_iso = @mb_convert_encoding($curr, 'ISO-8859-1', 'UTF-8');
+            if ($try_iso && mb_check_encoding($try_iso, 'UTF-8') && $try_iso !== $curr) {
+                $curr = $try_iso;
+                continue;
+            }
+
+            break;
+        }
+        return $curr;
+    }
+}
+
+// Auto Migration: Fix mojibake / double-encoded UTF-8 emojis in project_list & task_list
+$mojibake_projects = @mysqli_query($conn, "SELECT id, name FROM project_list WHERE name LIKE '%\xC3\xA2%' OR name LIKE '%â%' OR name LIKE '%ï¸%'");
+if ($mojibake_projects) {
+    while ($proj = mysqli_fetch_assoc($mojibake_projects)) {
+        $fixed = fix_mojibake($proj['name']);
+        if ($fixed !== $proj['name']) {
+            $fixed_esc = mysqli_real_escape_string($conn, $fixed);
+            @mysqli_query($conn, "UPDATE project_list SET name = '{$fixed_esc}' WHERE id = {$proj['id']}");
+        }
+    }
+}
 
 // Auto Migration: Sync status to 0 (Resign / Non-Aktif) for users with [RESIGN] in name
 @mysqli_query($conn, "UPDATE users SET status = 0 WHERE (firstname LIKE '%[RESIGN]%' OR firstname LIKE '%[Resign]%' OR lastname LIKE '%[RESIGN]%' OR lastname LIKE '%[Resign]%') AND (status IS NULL OR status != 0)");
