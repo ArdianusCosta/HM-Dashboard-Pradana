@@ -1,20 +1,20 @@
 <?php include 'header.php' ?>
   
   <aside class="main-sidebar sidebar-light-dark elevation-3 main-sidebar sidebar-light-dark elevation-3 d-flex flex-column">
-    <div class="ml-3 mt-5">
+    <div class="px-2 mt-2 mb-1 text-center">
    	<a href="./" class="">
         <h3 class="text-center p-0 m-0">
-          <img src="assets/Logo.png" id="logoFull" class="img-fluid d-block" style="width: 80%;" alt="Full Logo">
+          <img src="images/Logo Nusa Energi (Final).jpg.jpeg" id="logoFull" class="img-fluid d-block mx-auto" style="width: 95%; margin-bottom: -5px;" alt="Full Logo">
         </h3>  
         <h3 class="text-center p-0 m-0">
-          <img src="assets/Logo1.png" id="logoMini" class="img-fluid d-none" style="width: 40px;" alt="Mini Logo">
+          <img src="images/Logo Nusa Energi (Final).jpg.jpeg" id="logoMini" class="img-fluid d-none" style="width: 40px;" alt="Mini Logo">
         </h3>
     </a>
-    <small ><p class="text-dark text-center pr-3" style="text-decoration: none">PT Hai Motion Kreatif</p> </small>
+    <small><p class="text-dark text-center font-weight-bold" style="text-decoration: none; font-size: 13px; margin-top: -50px; margin-bottom: 15px; position: relative; z-index: 2;">PT Pradana Nusa Energi</p></small>
     </div>
 
-    <div class="sidebar pb-2 mb-4">
-      <nav class=" mb-auto ml-auto">
+    <div class="sidebar pt-2 mt-2 pb-2 mb-4">
+      <nav class="mt-0 mb-auto ml-auto">
         <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
           <li class="nav-item dropdown mb-2">
             <a href="./" class="nav-link nav-home ">

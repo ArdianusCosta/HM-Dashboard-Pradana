@@ -170,7 +170,7 @@
     padding: 10px;
 ">
     <strong style="color:#B75301;">&copy; 2026 
-        <a style="color:#B75301;">PT HAI MOTION KREATIF</a>
+        <a href="https://haimotion.com" target="_blank" style="color:#B75301;">PT HAI MOTION KREATIF</a>
     </strong>
     All rights reserved.
 </footer>

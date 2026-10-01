@@ -289,7 +289,7 @@ html, body {
         <div class="form-body without-side">
           <div class="iofrm-layout">
             <div class="img-holder text-center mb-3">
-              <img src="assets/Logo1.png" alt="Logo" width="100px">
+              <img src="images/Logo Nusa Energi (Final).jpg.jpeg" alt="Logo" width="100px">
             </div>
             <div class="form-content text-center mb-4">
               <h4 class="font-weight-bold" style="color: #B75301;">Login to account</h4>
