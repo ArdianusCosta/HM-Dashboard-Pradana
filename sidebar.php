@@ -4,13 +4,13 @@
     <div class="px-2 mt-2 mb-1 text-center">
    	<a href="./" class="">
         <h3 class="text-center p-0 m-0">
-          <img src="images/Logo Nusa Energi (Final).jpg.jpeg" id="logoFull" class="img-fluid d-block mx-auto" style="width: 95%; margin-bottom: -5px;" alt="Full Logo">
+          <img src="images/logo_pradana_transparent.png" id="logoFull" class="img-fluid d-block mx-auto" style="width: 85%; margin-bottom: 5px;" alt="Full Logo">
         </h3>  
         <h3 class="text-center p-0 m-0">
-          <img src="images/Logo Nusa Energi (Final).jpg.jpeg" id="logoMini" class="img-fluid d-none" style="width: 40px;" alt="Mini Logo">
+          <img src="images/logo_pradana_transparent.png" id="logoMini" class="img-fluid d-none" style="width: 40px;" alt="Mini Logo">
         </h3>
     </a>
-    <small><p class="text-dark text-center font-weight-bold" style="text-decoration: none; font-size: 13px; margin-top: -50px; margin-bottom: 15px; position: relative; z-index: 2;">PT Pradana Nusa Energi</p></small>
+    <small><p class="text-dark text-center font-weight-bold" style="text-decoration: none; font-size: 13px; margin-top: 8px; margin-bottom: 15px; position: relative; z-index: 2;">PT Pradana Nusa Energi</p></small>
     </div>
 
     <div class="sidebar pt-2 mt-2 pb-2 mb-4">

@@ -52,7 +52,7 @@ if (!ini_get('date.timezone')) {
 
     <script type="text/javascript" src="assets/js/jquery-te-1.4.0.min.js" charset="utf-8"></script>
     
-    <link rel="icon" type="image/png" href="assets/logobw.png">
+    <link rel="icon" type="image/png" href="images/logo_pradana_transparent.png">
     
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
 
