@@ -1051,13 +1051,15 @@ class Action {
                 $full_name = ucwords($recipient_user['firstname'] . ' ' . $recipient_user['lastname']);
                 $target_email = !empty($recipient_user['notification_email']) ? $recipient_user['notification_email'] : $recipient_user['email'];
 
-                $email_details = [
-                    'email' => $target_email,
-                    'name'  => $full_name,
-                    'subject' => "[CHAT BARU] Pesan dari {$sender_name}"
-                ];
+                $email_subject = "[CHAT BARU] Pesan dari {$sender_name}";
                 
-                record_notification($recipient_user['id'], 4, $notification_message, $link, $this->db, true, $email_details);
+                // 1. Notifikasi in-app lonceng (instan)
+                record_notification($recipient_user['id'], 4, $notification_message, $link, $this->db, false);
+
+                // 2. Masukkan ke antrian email background (instan, non-blocking)
+                if (function_exists('queue_chat_notification_email') && !empty($target_email)) {
+                    queue_chat_notification_email($recipient_user['id'], $target_email, $full_name, $email_subject, $notification_message, $link, 'personal', $thread_id, $this->db);
+                }
             }
             
             $_SESSION['notification']['status'] = 'success';
@@ -1297,10 +1299,15 @@ class Action {
 
             while ($user = $members_q->fetch_assoc()) {
                 $target_email = !empty($user['notification_email']) ? $user['notification_email'] : $user['email'];
-                $email_details = [
-                    'email' => $target_email, 'name'  => ucwords($user['firstname'] . ' ' . $user['lastname']), 'subject' => $email_subject
-                ];
-                record_notification($user['id'], 5, $notification_message, $link, $this->db, true, $email_details);
+                $full_name = ucwords($user['firstname'] . ' ' . $user['lastname']);
+                
+                // 1. Notifikasi in-app lonceng (instan)
+                record_notification($user['id'], 5, $notification_message, $link, $this->db, false);
+
+                // 2. Masukkan ke antrian email background (instan, non-blocking)
+                if (function_exists('queue_chat_notification_email') && !empty($target_email)) {
+                    queue_chat_notification_email($user['id'], $target_email, $full_name, $email_subject, $notification_message, $link, 'group', $group_id, $this->db);
+                }
             }
 
             $_SESSION['notification']['status'] = 'success';

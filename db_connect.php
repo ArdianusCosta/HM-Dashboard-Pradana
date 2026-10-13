@@ -42,6 +42,27 @@ if ($check_jobtitle_col && mysqli_num_rows($check_jobtitle_col) == 0) {
     @mysqli_query($conn, "ALTER TABLE users ADD COLUMN job_title VARCHAR(100) NULL DEFAULT NULL AFTER status");
 }
 
+// Auto Migration: Create chat_email_queue table if missing
+@mysqli_query($conn, "CREATE TABLE IF NOT EXISTS `chat_email_queue` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `recipient_id` INT NOT NULL,
+    `recipient_email` VARCHAR(255) NOT NULL,
+    `recipient_name` VARCHAR(255) NOT NULL,
+    `subject` VARCHAR(255) NOT NULL,
+    `message_html` TEXT NOT NULL,
+    `link` VARCHAR(255) DEFAULT '',
+    `chat_type` ENUM('group', 'personal') DEFAULT 'personal',
+    `source_id` INT NOT NULL DEFAULT 0,
+    `status` ENUM('pending', 'processing', 'sent', 'failed', 'skipped') DEFAULT 'pending',
+    `attempts` INT NOT NULL DEFAULT 0,
+    `error_message` TEXT NULL,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    `sent_at` DATETIME NULL,
+    INDEX `idx_status` (`status`),
+    INDEX `idx_created` (`created_at`),
+    INDEX `idx_recipient_source` (`recipient_id`, `chat_type`, `source_id`, `status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
 // Auto Migration: Ensure tables use utf8mb4 for emoji support
 @mysqli_query($conn, "ALTER TABLE project_list CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
 @mysqli_query($conn, "ALTER TABLE task_list CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");

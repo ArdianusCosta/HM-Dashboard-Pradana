@@ -115,16 +115,20 @@ If you are migrating from an existing installation, you can restore the previous
 
 The system includes reminder functionality that can be triggered by cron. This is important for automatic reminders and event notifications.
 
-Example cron entry:
+Example cron entries:
 
 ```bash
+# Event reminders
 * * * * * /usr/bin/php /path/to/public_html/send_event_reminders.php?key=secret123 >/dev/null 2>&1
+
+# Chat email notifications queue (every 1 or 2 minutes)
+* * * * * /usr/bin/php /path/to/public_html/process_email_queue.php >/dev/null 2>&1
 ```
 
 Notes:
 
 - Replace the path with the real absolute path to your project.
-- The secret key is defined in [send_event_reminders.php](send_event_reminders.php).
+- The secret key is defined in [send_event_reminders.php](send_event_reminders.php) and [process_email_queue.php](process_email_queue.php).
 - For security, change the key from the default value.
 
 ## 11. Recommended Production Checklist

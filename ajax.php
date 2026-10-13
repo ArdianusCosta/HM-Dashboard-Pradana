@@ -38,6 +38,12 @@ if ($action == 'save_personal_chat_message') { echo $crud->save_personal_chat_me
 if ($action == 'get_personal_chat_messages') { echo $crud->get_personal_chat_messages(); exit; }
 if ($action == 'get_total_unread_chat_count') { echo $crud->get_total_unread_chat_count(); exit; }
 if ($action == 'get_overview_kpi') { echo $crud->get_overview_kpi(); exit; }
+if ($action == 'process_chat_email_queue') {
+    require_once 'phpmailer_config.php';
+    header('Content-Type: application/json');
+    echo json_encode(process_chat_email_queue($conn, 10));
+    exit;
+}
 
 /* ========== PROJECT MANAGEMENT ========== */
 if ($action == 'save_project') {

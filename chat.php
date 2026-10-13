@@ -1510,6 +1510,9 @@ $initial_group_id_js = $initial_group_id === null ? '' : (string)$initial_group_
             error: function(xhr, status, error) {
                 console.error("AJAX Error (loadChatMessages):", status, error, xhr.responseText);
                 if(isManualLoad) chatBox.html('<div class="text-center p-5 text-danger">Error loading messages. Check console for details.</div>');
+            },
+            complete: function() {
+                isChatPolling = false;
             }
         });
     }
@@ -1790,6 +1793,9 @@ $initial_group_id_js = $initial_group_id === null ? '' : (string)$initial_group_
             error: function(xhr, status, error) {
                  console.error("AJAX Error (Load Chat Sidebar):", status, error, xhr.responseText);
                  if(initialLoad) $('#user_list_display').html('<div class="text-center p-3 text-danger">Gagal memuat daftar chat.</div>');
+            },
+            complete: function() {
+                isChatPolling = false;
             }
         });
     }
@@ -1901,6 +1907,10 @@ $initial_group_id_js = $initial_group_id === null ? '' : (string)$initial_group_
         // Must have either text or an attached image — not necessarily both
         if (messageContent === '' && !selectedImageFile) return;
 
+        var submitBtn = $(this).find('button[type="submit"]');
+        var originalBtnHtml = submitBtn.html();
+        submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+
         var action = currentChatType === 'personal' ? 'save_personal_chat_message' : 'save_group_chat_message';
 
         // Use FormData whenever an image is attached (needed for file upload);
@@ -1934,21 +1944,82 @@ $initial_group_id_js = $initial_group_id === null ? '' : (string)$initial_group_
                     $('#message_content').val('');
                     clearImagePreview();
                     loadChatMessages(true); 
-                    loadChatSidebar(false);
-                    updateChatBadge();
+                    // Picu pemrosesan antrian email di latar belakang
+                    setTimeout(function() {
+                        $.get('ajax.php?action=process_chat_email_queue');
+                    }, 3500);
                 } else {
                     alert_toast("Gagal menyimpan pesan: " + resp, "error");
                 }
             },
             error: function() {
                 alert_toast("Terjadi kesalahan saat mengirim pesan.", "error");
+            },
+            complete: function() {
+                submitBtn.prop('disabled', false).html(originalBtnHtml);
             }
         }, ajaxOptions));
     });
 
-    // --- IMAGE ATTACHMENT HANDLERS ---
+    // --- IMAGE ATTACHMENT HANDLERS WITH CLIENT-SIDE COMPRESSION ---
     let selectedImageFile = null;
-    const MAX_IMAGE_SIZE_MB = 5;
+    const MAX_IMAGE_SIZE_MB = 15;
+
+    function compressImageIfNeeded(file, callback) {
+        if (!file.type.startsWith('image/') || file.type === 'image/gif' || file.type === 'image/svg+xml') {
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                callback(file, ev.target.result);
+            };
+            reader.readAsDataURL(file);
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                const maxDim = 1280;
+                let width = img.width;
+                let height = img.height;
+
+                if (width > maxDim || height > maxDim) {
+                    if (width > height) {
+                        height = Math.round((height * maxDim) / width);
+                        width = maxDim;
+                    } else {
+                        width = Math.round((width * maxDim) / height);
+                        height = maxDim;
+                    }
+                }
+
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                canvas.toBlob(function(blob) {
+                    if (!blob) {
+                        callback(file, e.target.result);
+                        return;
+                    }
+                    const safeName = file.name.replace(/\.[^/.]+$/, "") + ".jpg";
+                    const compressedFile = new File([blob], safeName, {
+                        type: 'image/jpeg',
+                        lastModified: Date.now()
+                    });
+                    const previewUrl = canvas.toDataURL('image/jpeg', 0.82);
+                    callback(compressedFile, previewUrl);
+                }, 'image/jpeg', 0.82);
+            };
+            img.onerror = function() {
+                callback(file, e.target.result);
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
 
     $('#attach_image_btn').click(function() {
         $('#message_image_input').click();
@@ -1959,23 +2030,22 @@ $initial_group_id_js = $initial_group_id === null ? '' : (string)$initial_group_
         if (!file) return;
 
         if (!file.type.startsWith('image/')) {
-            alert_toast("Please select an image file.", "error");
+            alert_toast("Silakan pilih file gambar.", "error");
             $(this).val('');
             return;
         }
         if (file.size > MAX_IMAGE_SIZE_MB * 1024 * 1024) {
-            alert_toast(`Image is too large. Max ${MAX_IMAGE_SIZE_MB}MB.`, "error");
+            alert_toast(`Ukuran gambar terlalu besar. Maksimal ${MAX_IMAGE_SIZE_MB}MB.`, "error");
             $(this).val('');
             return;
         }
 
-        selectedImageFile = file;
-        const reader = new FileReader();
-        reader.onload = function(ev) {
-            $('#image_preview_thumb').attr('src', ev.target.result);
-            $('#image_preview_bar').addClass('active');
-        };
-        reader.readAsDataURL(file);
+        $('#image_preview_bar').addClass('active');
+
+        compressImageIfNeeded(file, function(compressedFile, previewUrl) {
+            selectedImageFile = compressedFile;
+            $('#image_preview_thumb').attr('src', previewUrl);
+        });
     });
 
     $('#remove_image_preview_btn').click(function() {
@@ -2157,13 +2227,22 @@ $initial_group_id_js = $initial_group_id === null ? '' : (string)$initial_group_
 
     loadChatSidebar(true);
     
-    // --- POLLING ---
+    // --- POLLING & BACKGROUND QUEUE TRIGGER ---
+    let isChatPolling = false;
     setInterval(function(){
-        if(currentThreadId || currentGroupId) {
+        if (isChatPolling) return;
+        isChatPolling = true;
+        if (currentThreadId || currentGroupId) {
              loadChatMessages(false); 
+        } else {
+             loadChatSidebar(false);
         }
-        loadChatSidebar(false);
-    }, 3000);
+    }, 4000);
+
+    // Otomatis picu background email queue setiap 45 detik
+    setInterval(function() {
+        $.get('ajax.php?action=process_chat_email_queue');
+    }, 45000);
 
     
 </script>

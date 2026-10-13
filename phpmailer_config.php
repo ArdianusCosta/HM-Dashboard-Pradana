@@ -140,6 +140,136 @@ function record_notification($user_id, $type, $message, $link, $conn, $send_emai
 }
 
 /* ==============================
+   SISTEM ANTRIAN EMAIL CHAT (ASYNC QUEUE)
+   ============================== */
+function queue_chat_notification_email($recipient_id, $recipient_email, $recipient_name, $subject, $message, $link, $chat_type, $source_id, $conn) {
+    if (empty($recipient_email) || !filter_var($recipient_email, FILTER_VALIDATE_EMAIL)) {
+        return false;
+    }
+    
+    $recipient_id   = intval($recipient_id);
+    $recipient_email= $conn->real_escape_string($recipient_email);
+    $recipient_name = $conn->real_escape_string($recipient_name);
+    $subject        = $conn->real_escape_string($subject);
+    $message        = $conn->real_escape_string($message);
+    $link           = $conn->real_escape_string($link);
+    $chat_type      = ($chat_type === 'group') ? 'group' : 'personal';
+    $source_id      = intval($source_id);
+
+    $sql = "INSERT INTO chat_email_queue (recipient_id, recipient_email, recipient_name, subject, message_html, link, chat_type, source_id, status)
+            VALUES ('{$recipient_id}', '{$recipient_email}', '{$recipient_name}', '{$subject}', '{$message}', '{$link}', '{$chat_type}', '{$source_id}', 'pending')";
+    return $conn->query($sql);
+}
+
+function process_chat_email_queue($conn, $max_batch = 10) {
+    $results = ['processed' => 0, 'sent' => 0, 'skipped' => 0, 'failed' => 0];
+    
+    // Ambil ID email yang berstatus pending
+    $qry = $conn->query("
+        SELECT id FROM chat_email_queue 
+        WHERE status = 'pending' AND attempts < 3 
+        ORDER BY created_at ASC 
+        LIMIT {$max_batch}
+    ");
+
+    if (!$qry || $qry->num_rows == 0) {
+        return $results;
+    }
+
+    $ids = [];
+    while ($r = $qry->fetch_assoc()) {
+        $ids[] = intval($r['id']);
+    }
+
+    $ids_str = implode(',', $ids);
+    
+    // Lock item menjadi 'processing'
+    $lock = $conn->query("UPDATE chat_email_queue SET status = 'processing' WHERE id IN ({$ids_str}) AND status = 'pending'");
+    if (!$lock) {
+        return $results;
+    }
+
+    // Ambil data item yang berhasil di-lock
+    $items_qry = $conn->query("SELECT * FROM chat_email_queue WHERE id IN ({$ids_str}) AND status = 'processing'");
+    if (!$items_qry) {
+        return $results;
+    }
+    
+    while ($item = $items_qry->fetch_assoc()) {
+        $results['processed']++;
+        $id = $item['id'];
+        $recipient_id = intval($item['recipient_id']);
+        $source_id = intval($item['source_id']);
+        $chat_type = $item['chat_type'];
+        $created_at = $item['created_at'];
+
+        // Cek Cerdas: Apakah penerima sudah membaca pesan ini di browser?
+        $already_read = false;
+        if ($chat_type === 'group') {
+            $read_check = $conn->query("
+                SELECT last_read_at FROM user_group_read_status 
+                WHERE group_id = '{$source_id}' AND user_id = '{$recipient_id}'
+            ");
+            if ($read_check && $read_row = $read_check->fetch_assoc()) {
+                if (!empty($read_row['last_read_at']) && strtotime($read_row['last_read_at']) >= strtotime($created_at)) {
+                    $already_read = true;
+                }
+            }
+        } else {
+            // Personal chat: cek apakah pesan setelah created_at sudah dibaca (is_read = 1)
+            $read_check = $conn->query("
+                SELECT COUNT(*) as unread_c FROM chat_messages 
+                WHERE thread_id = '{$source_id}' AND sender_id != '{$recipient_id}' AND is_read = 0 AND created_at >= '{$created_at}'
+            ");
+            if ($read_check && $read_row = $read_check->fetch_assoc()) {
+                if (intval($read_row['unread_c']) == 0) {
+                    $already_read = true;
+                }
+            }
+        }
+
+        if ($already_read) {
+            $conn->query("UPDATE chat_email_queue SET status = 'skipped', sent_at = NOW(), error_message = 'Already read by recipient in chat' WHERE id = '{$id}'");
+            $results['skipped']++;
+            continue;
+        }
+
+        // Jika belum dibaca, kirim email notifikasi
+        $full_link = APP_BASE_URL . $item['link'];
+        $html_message = "
+            Anda mendapat notifikasi pesan baru: <strong>" . htmlspecialchars($item['message_html'], ENT_QUOTES, 'UTF-8') . "</strong><br><br>
+            Buka percakapan langsung di sini: <br>
+            <a href='{$full_link}' style='display:inline-block; margin-top:10px; background:#B75301; color:#fff; padding:8px 16px; text-decoration:none; border-radius:4px;'>Buka Chat</a>
+        ";
+
+        try {
+            $send_ok = send_task_notification_email(
+                $item['recipient_email'],
+                $item['recipient_name'],
+                $item['subject'],
+                $html_message
+            );
+
+            if ($send_ok) {
+                $conn->query("UPDATE chat_email_queue SET status = 'sent', sent_at = NOW(), error_message = NULL WHERE id = '{$id}'");
+                $results['sent']++;
+            } else {
+                $conn->query("UPDATE chat_email_queue SET attempts = attempts + 1, status = IF(attempts >= 3, 'failed', 'pending'), error_message = 'SMTP Send Failed' WHERE id = '{$id}'");
+                $results['failed']++;
+            }
+        } catch (Throwable $e) {
+            $err = $conn->real_escape_string($e->getMessage());
+            $conn->query("UPDATE chat_email_queue SET attempts = attempts + 1, status = IF(attempts >= 3, 'failed', 'pending'), error_message = '{$err}' WHERE id = '{$id}'");
+            $results['failed']++;
+        }
+
+        usleep(150000); // 0.15s jeda
+    }
+
+    return $results;
+}
+
+/* ==============================
    SISTEM REMINDER UNTUK CUSTOM EVENTS
    ============================== */
 function send_event_reminders_to_all_users($conn) {
